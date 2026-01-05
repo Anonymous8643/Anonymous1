@@ -1,76 +1,75 @@
 import { motion } from "framer-motion";
-import { TrendingUp, Package, Clock, Award } from "lucide-react";
+import { TrendingUp, Package, Clock, Award, LogOut } from "lucide-react";
 import { StatsCard } from "./ui/StatsCard";
 import { ProductCard } from "./ui/ProductCard";
 import { NoticeBoard } from "./ui/NoticeBoard";
 import { WalletCard } from "./ui/WalletCard";
 import { BottomNav } from "./ui/BottomNav";
-
-// Mock data
-const mockProducts = [
-  {
-    id: "1",
-    name: "Starter Growth Fund",
-    price: 5000,
-    expectedReturn: 6500,
-    duration: "7 days",
-    progress: 45,
-    unitsLeft: 3,
-    isPopular: true,
-    category: "Beginner",
-  },
-  {
-    id: "2",
-    name: "Premium Yield Plus",
-    price: 15000,
-    expectedReturn: 21000,
-    duration: "14 days",
-    progress: 72,
-    isPopular: false,
-    category: "Intermediate",
-  },
-  {
-    id: "3",
-    name: "Elite Investment Plan",
-    price: 50000,
-    expectedReturn: 75000,
-    duration: "30 days",
-    progress: 28,
-    unitsLeft: 5,
-    isPopular: true,
-    category: "Advanced",
-  },
-];
-
-const mockNotices = [
-  {
-    id: "1",
-    title: "Welcome Bonus Available!",
-    message: "New users get 10% extra returns on their first investment. Limited time offer!",
-    date: "2 hours ago",
-    type: "important" as const,
-  },
-  {
-    id: "2",
-    title: "System Maintenance Notice",
-    message: "Scheduled maintenance on Sunday 2AM - 4AM EAT. Services may be briefly unavailable.",
-    date: "1 day ago",
-    type: "info" as const,
-  },
-  {
-    id: "3",
-    title: "New Products Added",
-    message: "Check out our latest high-yield investment products with up to 50% returns.",
-    date: "3 days ago",
-    type: "update" as const,
-  },
-];
+import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
+import { useWallet } from "@/hooks/useWallet";
+import { useProducts } from "@/hooks/useProducts";
+import { useNotices } from "@/hooks/useNotices";
+import { useInvestments } from "@/hooks/useInvestments";
+import { Skeleton } from "./ui/skeleton";
+import { Button } from "./ui/button";
+import { formatDistanceToNow } from "date-fns";
 
 export const Dashboard = () => {
-  const userName = "John";
+  const { user, signOut } = useAuth();
+  const { data: profile, isLoading: profileLoading } = useProfile();
+  const { data: wallet, isLoading: walletLoading } = useWallet();
+  const { data: products, isLoading: productsLoading } = useProducts();
+  const { data: notices, isLoading: noticesLoading } = useNotices();
+  const { data: investments, isLoading: investmentsLoading } = useInvestments();
+
   const currentHour = new Date().getHours();
   const greeting =
     currentHour < 12 ? "Good morning" : currentHour < 17 ? "Good afternoon" : "Good evening";
+
+  const userName = profile?.full_name?.split(" ")[0] || user?.email?.split("@")[0] || "Investor";
+
+  // Calculate stats from real data
+  const activeInvestments = investments?.filter((inv) => inv.status === "active") || [];
+  const totalInvested = activeInvestments.reduce((sum, inv) => sum + Number(inv.amount), 0);
+  const pendingReturns = activeInvestments.reduce((sum, inv) => sum + (Number(inv.expected_return) - Number(inv.amount)), 0);
+
+  // Find next maturity
+  const nextMaturity = activeInvestments
+    .map((inv) => new Date(inv.matures_at))
+    .filter((date) => date > new Date())
+    .sort((a, b) => a.getTime() - b.getTime())[0];
+
+  const nextReturnText = nextMaturity
+    ? formatDistanceToNow(nextMaturity, { addSuffix: false })
+    : "No active";
+
+  // Format notices for component
+  const formattedNotices = notices?.map((notice) => ({
+    id: notice.id,
+    title: notice.title,
+    message: notice.message,
+    date: formatDistanceToNow(new Date(notice.created_at), { addSuffix: true }),
+    type: notice.type,
+  })) || [];
+
+  // Format products for component
+  const formattedProducts = products?.slice(0, 4).map((product) => ({
+    id: product.id,
+    name: product.name,
+    price: Number(product.price),
+    expectedReturn: Number(product.expected_return),
+    duration: `${product.duration_days} days`,
+    progress: Math.floor(Math.random() * 100), // Simulated for display
+    unitsLeft: product.total_units && product.units_sold 
+      ? product.total_units - product.units_sold 
+      : undefined,
+    isPopular: product.is_popular || false,
+    category: product.category,
+    imageUrl: product.image_url,
+    description: product.description,
+    durationDays: product.duration_days,
+  })) || [];
 
   return (
     <div className="min-h-screen pb-24">
@@ -83,18 +82,36 @@ export const Dashboard = () => {
             className="flex items-center justify-between"
           >
             <div>
-              <p className="text-muted-foreground text-sm">{greeting},</p>
-              <h1 className="text-xl font-display font-bold">
-                Welcome, <span className="gradient-text">{userName}</span>! 👋
-              </h1>
+              {profileLoading ? (
+                <Skeleton className="h-4 w-24 mb-1" />
+              ) : (
+                <p className="text-muted-foreground text-sm">{greeting},</p>
+              )}
+              {profileLoading ? (
+                <Skeleton className="h-6 w-40" />
+              ) : (
+                <h1 className="text-xl font-display font-bold">
+                  Welcome, <span className="gradient-text">{userName}</span>! 👋
+                </h1>
+              )}
             </div>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-trust flex items-center justify-center text-primary-foreground font-bold"
-            >
-              {userName[0]}
-            </motion.div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={signOut}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <LogOut className="w-5 h-5" />
+              </Button>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-trust flex items-center justify-center text-primary-foreground font-bold uppercase"
+              >
+                {userName[0]}
+              </motion.div>
+            </div>
           </motion.div>
         </div>
       </header>
@@ -102,13 +119,20 @@ export const Dashboard = () => {
       {/* Main Content */}
       <main className="px-4 py-6 max-w-lg mx-auto space-y-6">
         {/* Wallet Card */}
-        <WalletCard balance={125750} pendingReturns={18500} />
+        {walletLoading ? (
+          <Skeleton className="h-48 w-full rounded-2xl" />
+        ) : (
+          <WalletCard 
+            balance={Number(wallet?.balance || 0)} 
+            pendingReturns={pendingReturns} 
+          />
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3">
           <StatsCard
             title="Total Invested"
-            value="KES 85K"
+            value={investmentsLoading ? "..." : `KES ${(totalInvested / 1000).toFixed(0)}K`}
             change="+12.5%"
             changeType="profit"
             icon={TrendingUp}
@@ -116,13 +140,13 @@ export const Dashboard = () => {
           />
           <StatsCard
             title="Active Products"
-            value="4"
+            value={investmentsLoading ? "..." : String(activeInvestments.length)}
             icon={Package}
             delay={0.2}
           />
           <StatsCard
             title="Next Return"
-            value="2 days"
+            value={investmentsLoading ? "..." : nextReturnText}
             icon={Clock}
             delay={0.3}
           />
@@ -137,7 +161,11 @@ export const Dashboard = () => {
         </div>
 
         {/* Notice Board */}
-        <NoticeBoard notices={mockNotices} />
+        {noticesLoading ? (
+          <Skeleton className="h-40 w-full rounded-xl" />
+        ) : (
+          <NoticeBoard notices={formattedNotices} />
+        )}
 
         {/* Products Section */}
         <section>
@@ -149,15 +177,22 @@ export const Dashboard = () => {
               See all
             </button>
           </div>
-          <div className="space-y-4">
-            {mockProducts.map((product, index) => (
-              <ProductCard
-                key={product.id}
-                {...product}
-                delay={0.1 * index}
-              />
-            ))}
-          </div>
+          {productsLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-64 w-full rounded-xl" />
+              <Skeleton className="h-64 w-full rounded-xl" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {formattedProducts.map((product, index) => (
+                <ProductCard
+                  key={product.id}
+                  {...product}
+                  delay={0.1 * index}
+                />
+              ))}
+            </div>
+          )}
         </section>
       </main>
 
