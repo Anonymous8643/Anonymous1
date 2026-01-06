@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { TrendingUp, Package, Clock, Award, LogOut } from "lucide-react";
+import { TrendingUp, Package, Clock, Award, LogOut, Flame, Gift } from "lucide-react";
 import { StatsCard } from "./ui/StatsCard";
 import { ProductCard } from "./ui/ProductCard";
 import { NoticeBoard } from "./ui/NoticeBoard";
@@ -11,9 +11,13 @@ import { useWallet } from "@/hooks/useWallet";
 import { useProducts } from "@/hooks/useProducts";
 import { useNotices } from "@/hooks/useNotices";
 import { useInvestments } from "@/hooks/useInvestments";
+import { useUserStreak, useUserLevel, useUpdateStreak } from "@/hooks/useGamification";
 import { Skeleton } from "./ui/skeleton";
 import { Button } from "./ui/button";
 import { formatDistanceToNow } from "date-fns";
+import logo from "@/assets/logo.png";
+import { useEffect } from "react";
+import { Link } from "react-router-dom";
 
 export const Dashboard = () => {
   const { user, signOut } = useAuth();
@@ -22,6 +26,16 @@ export const Dashboard = () => {
   const { data: products, isLoading: productsLoading } = useProducts();
   const { data: notices, isLoading: noticesLoading } = useNotices();
   const { data: investments, isLoading: investmentsLoading } = useInvestments();
+  const { data: streak } = useUserStreak();
+  const { data: level } = useUserLevel();
+  const { mutate: updateStreak } = useUpdateStreak();
+
+  // Update streak on dashboard load (only once per session)
+  useEffect(() => {
+    if (user && streak !== undefined) {
+      updateStreak();
+    }
+  }, [user?.id]);
 
   const currentHour = new Date().getHours();
   const greeting =
@@ -81,21 +95,35 @@ export const Dashboard = () => {
             animate={{ opacity: 1, y: 0 }}
             className="flex items-center justify-between"
           >
-            <div>
-              {profileLoading ? (
-                <Skeleton className="h-4 w-24 mb-1" />
-              ) : (
-                <p className="text-muted-foreground text-sm">{greeting},</p>
-              )}
-              {profileLoading ? (
-                <Skeleton className="h-6 w-40" />
-              ) : (
-                <h1 className="text-xl font-display font-bold">
-                  Welcome, <span className="gradient-text">{userName}</span>! 👋
-                </h1>
-              )}
+            <div className="flex items-center gap-3">
+              <img src={logo} alt="InvesterMate" className="w-10 h-10" />
+              <div>
+                {profileLoading ? (
+                  <Skeleton className="h-4 w-24 mb-1" />
+                ) : (
+                  <p className="text-muted-foreground text-sm">{greeting},</p>
+                )}
+                {profileLoading ? (
+                  <Skeleton className="h-6 w-40" />
+                ) : (
+                  <h1 className="text-lg font-display font-bold">
+                    <span className="gradient-text">{userName}</span> 👋
+                  </h1>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2">
+              {/* Streak Badge */}
+              <Link to="/rewards">
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center gap-1 px-2 py-1 rounded-full bg-orange-500/10 border border-orange-500/20"
+                >
+                  <Flame className="w-4 h-4 text-orange-500" />
+                  <span className="text-xs font-bold text-orange-500">{streak?.current_streak || 0}</span>
+                </motion.div>
+              </Link>
               <Button
                 variant="ghost"
                 size="icon"
@@ -152,8 +180,8 @@ export const Dashboard = () => {
           />
           <StatsCard
             title="Level"
-            value="Silver"
-            change="450 XP"
+            value={level?.level_title || "Beginner"}
+            change={`${level?.total_xp || 0} XP`}
             changeType="neutral"
             icon={Award}
             delay={0.4}

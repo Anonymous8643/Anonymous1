@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Share2, Gift, Users, Trophy, Copy, CheckCircle, MessageCircle } from "lucide-react";
+import { Share2, Gift, Users, Trophy, Copy, CheckCircle, MessageCircle, Crown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BottomNav } from "@/components/ui/BottomNav";
 import { useProfile } from "@/hooks/useProfile";
@@ -8,6 +8,8 @@ import { useReferrals, useReferralStats } from "@/hooks/useReferrals";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
+import logo from "@/assets/logo.png";
+import { Link } from "react-router-dom";
 
 const milestones = [
   { count: 5, badge: "Bronze Referrer", reward: 500, icon: "🥉" },
@@ -55,8 +57,22 @@ export default function Referrals() {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="px-4 py-4 max-w-lg mx-auto">
-          <h1 className="text-xl font-display font-bold">Referrals</h1>
-          <p className="text-sm text-muted-foreground">Invite friends and earn rewards</p>
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3">
+              <img src={logo} alt="InvesterMate" className="w-10 h-10" />
+              <div>
+                <h1 className="text-xl font-display font-bold">Referrals</h1>
+                <p className="text-sm text-muted-foreground">Invite friends & earn</p>
+              </div>
+            </div>
+            <Link to="/" className="text-muted-foreground hover:text-foreground">
+              <ChevronRight className="w-5 h-5 rotate-180" />
+            </Link>
+          </motion.div>
         </div>
       </header>
 

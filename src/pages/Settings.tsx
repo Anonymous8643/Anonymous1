@@ -15,6 +15,8 @@ import { useTransactions } from "@/hooks/useTransactions";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
+import logo from "@/assets/logo.png";
+import { Link } from "react-router-dom";
 
 export default function Settings() {
   const { user, signOut } = useAuth();
@@ -50,7 +52,19 @@ export default function Settings() {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="px-4 py-4 max-w-lg mx-auto">
-          <h1 className="text-xl font-display font-bold">Settings</h1>
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3">
+              <img src={logo} alt="InvesterMate" className="w-10 h-10" />
+              <h1 className="text-xl font-display font-bold">Settings</h1>
+            </div>
+            <Link to="/" className="text-muted-foreground hover:text-foreground">
+              <ChevronRight className="w-5 h-5 rotate-180" />
+            </Link>
+          </motion.div>
         </div>
       </header>
 

@@ -1,12 +1,13 @@
 import { motion } from "framer-motion";
-import { Search, Filter, TrendingUp, Clock, Users, Flame } from "lucide-react";
+import { Search, Filter, TrendingUp, Clock, Users, Flame, ChevronRight } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BottomNav } from "@/components/ui/BottomNav";
 import { useProducts } from "@/hooks/useProducts";
 import { Skeleton } from "@/components/ui/skeleton";
+import logo from "@/assets/logo.png";
 
 const categories = ["All", "Beginner", "Agriculture", "Technology", "Real Estate", "Energy", "Finance"];
 
@@ -27,7 +28,19 @@ export default function Products() {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="px-4 py-4 max-w-lg mx-auto">
-          <h1 className="text-xl font-display font-bold mb-4">Investment Products</h1>
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-between mb-4"
+          >
+            <div className="flex items-center gap-3">
+              <img src={logo} alt="InvesterMate" className="w-10 h-10" />
+              <h1 className="text-xl font-display font-bold">Products</h1>
+            </div>
+            <Link to="/" className="text-muted-foreground hover:text-foreground">
+              <ChevronRight className="w-5 h-5 rotate-180" />
+            </Link>
+          </motion.div>
           
           {/* Search */}
           <div className="relative mb-4">

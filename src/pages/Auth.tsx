@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2, TrendingUp } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import logo from "@/assets/logo.png";
 
 const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
@@ -116,9 +117,11 @@ export default function Auth() {
           transition={{ delay: 0.1 }}
           className="text-center mb-8"
         >
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-trust mb-4">
-            <TrendingUp className="w-8 h-8 text-primary-foreground" />
-          </div>
+          <img 
+            src={logo} 
+            alt="InvesterMate Logo" 
+            className="w-20 h-20 mx-auto mb-4 drop-shadow-2xl"
+          />
           <h1 className="text-3xl font-display font-bold gradient-text">InvesterMate</h1>
           <p className="text-muted-foreground mt-2">Your smart investment partner</p>
         </motion.div>

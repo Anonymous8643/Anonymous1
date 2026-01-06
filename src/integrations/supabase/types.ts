@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          category: string
+          code: string
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          is_active: boolean
+          requirement_type: string
+          requirement_value: number
+          reward_amount: number
+          tier: string
+          title: string
+          xp_reward: number
+        }
+        Insert: {
+          category?: string
+          code: string
+          created_at?: string
+          description: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          requirement_type: string
+          requirement_value?: number
+          reward_amount?: number
+          tier?: string
+          title: string
+          xp_reward?: number
+        }
+        Update: {
+          category?: string
+          code?: string
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          requirement_type?: string
+          requirement_value?: number
+          reward_amount?: number
+          tier?: string
+          title?: string
+          xp_reward?: number
+        }
+        Relationships: []
+      }
       investments: {
         Row: {
           amount: number
@@ -231,6 +279,60 @@ export type Database = {
           },
         ]
       }
+      spin_history: {
+        Row: {
+          created_at: string
+          id: string
+          prize_type: string
+          prize_value: number
+          spin_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          prize_type: string
+          prize_value?: number
+          spin_date?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          prize_type?: string
+          prize_value?: number
+          spin_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      streak_rewards: {
+        Row: {
+          claimed_at: string
+          created_at: string
+          id: string
+          reward_amount: number
+          streak_day: number
+          user_id: string
+        }
+        Insert: {
+          claimed_at?: string
+          created_at?: string
+          id?: string
+          reward_amount?: number
+          streak_day: number
+          user_id: string
+        }
+        Update: {
+          claimed_at?: string
+          created_at?: string
+          id?: string
+          reward_amount?: number
+          streak_day?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
@@ -260,6 +362,148 @@ export type Database = {
           reference_id?: string | null
           status?: string
           type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_achievements: {
+        Row: {
+          achieved_at: string
+          achievement_id: string
+          id: string
+          reward_claimed: boolean
+          user_id: string
+        }
+        Insert: {
+          achieved_at?: string
+          achievement_id: string
+          id?: string
+          reward_claimed?: boolean
+          user_id: string
+        }
+        Update: {
+          achieved_at?: string
+          achievement_id?: string
+          id?: string
+          reward_claimed?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievements_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_challenges: {
+        Row: {
+          challenge_id: string
+          completed: boolean
+          completed_at: string | null
+          current_progress: number
+          id: string
+          joined_at: string
+          reward_claimed: boolean
+          user_id: string
+        }
+        Insert: {
+          challenge_id: string
+          completed?: boolean
+          completed_at?: string | null
+          current_progress?: number
+          id?: string
+          joined_at?: string
+          reward_claimed?: boolean
+          user_id: string
+        }
+        Update: {
+          challenge_id?: string
+          completed?: boolean
+          completed_at?: string | null
+          current_progress?: number
+          id?: string
+          joined_at?: string
+          reward_claimed?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_challenges_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_levels: {
+        Row: {
+          created_at: string
+          current_level: number
+          current_xp: number
+          id: string
+          level_title: string
+          total_xp: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_level?: number
+          current_xp?: number
+          id?: string
+          level_title?: string
+          total_xp?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_level?: number
+          current_xp?: number
+          id?: string
+          level_title?: string
+          total_xp?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_streaks: {
+        Row: {
+          created_at: string
+          current_streak: number
+          id: string
+          last_login_date: string | null
+          longest_streak: number
+          streak_freeze_available: boolean
+          total_login_days: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_login_date?: string | null
+          longest_streak?: number
+          streak_freeze_available?: boolean
+          total_login_days?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_login_date?: string | null
+          longest_streak?: number
+          streak_freeze_available?: boolean
+          total_login_days?: number
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -294,6 +538,48 @@ export type Database = {
           total_returns?: number
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      weekly_challenges: {
+        Row: {
+          challenge_type: string
+          created_at: string
+          description: string
+          ends_at: string
+          id: string
+          is_active: boolean
+          reward_amount: number
+          starts_at: string
+          target_value: number
+          title: string
+          xp_reward: number
+        }
+        Insert: {
+          challenge_type: string
+          created_at?: string
+          description: string
+          ends_at: string
+          id?: string
+          is_active?: boolean
+          reward_amount?: number
+          starts_at?: string
+          target_value: number
+          title: string
+          xp_reward?: number
+        }
+        Update: {
+          challenge_type?: string
+          created_at?: string
+          description?: string
+          ends_at?: string
+          id?: string
+          is_active?: boolean
+          reward_amount?: number
+          starts_at?: string
+          target_value?: number
+          title?: string
+          xp_reward?: number
         }
         Relationships: []
       }

@@ -1,11 +1,11 @@
 import { motion } from "framer-motion";
-import { Home, Package, Users, Settings, Wallet } from "lucide-react";
+import { Home, Package, Users, Settings, Gift } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const navItems = [
   { id: "home", path: "/", label: "Home", icon: Home },
   { id: "products", path: "/products", label: "Products", icon: Package },
-  { id: "wallet", path: "/", label: "Wallet", icon: Wallet },
+  { id: "rewards", path: "/rewards", label: "Rewards", icon: Gift },
   { id: "referrals", path: "/referrals", label: "Referrals", icon: Users },
   { id: "settings", path: "/settings", label: "Settings", icon: Settings },
 ];
@@ -18,6 +18,7 @@ export const BottomNav = () => {
     const path = location.pathname;
     if (path === "/") return "home";
     if (path === "/products" || path.startsWith("/product/")) return "products";
+    if (path === "/rewards") return "rewards";
     if (path === "/referrals") return "referrals";
     if (path === "/settings") return "settings";
     return "home";
