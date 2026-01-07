@@ -62,6 +62,39 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_audit_log: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: string | null
+          target_id: string | null
+          target_table: string | null
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          target_id?: string | null
+          target_table?: string | null
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          target_id?: string | null
+          target_table?: string | null
+        }
+        Relationships: []
+      }
       investments: {
         Row: {
           amount: number
@@ -133,6 +166,120 @@ export type Database = {
           message?: string
           title?: string
           type?: string
+        }
+        Relationships: []
+      }
+      payment_numbers: {
+        Row: {
+          account_name: string
+          created_at: string
+          id: string
+          is_active: boolean
+          phone_number: string
+          priority: number
+          updated_at: string
+        }
+        Insert: {
+          account_name?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          phone_number: string
+          priority?: number
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          phone_number?: string
+          priority?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pending_deposits: {
+        Row: {
+          admin_notes: string | null
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          mpesa_code: string | null
+          payment_number_used: string
+          phone_number: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          mpesa_code?: string | null
+          payment_number_used: string
+          phone_number: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          mpesa_code?: string | null
+          payment_number_used?: string
+          phone_number?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pending_withdrawals: {
+        Row: {
+          admin_notes: string | null
+          amount: number
+          created_at: string
+          id: string
+          phone_number: string
+          processed_at: string | null
+          processed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount: number
+          created_at?: string
+          id?: string
+          phone_number: string
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          amount?: number
+          created_at?: string
+          id?: string
+          phone_number?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -472,6 +619,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_streaks: {
         Row: {
           created_at: string
@@ -588,10 +756,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -718,6 +892,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const
