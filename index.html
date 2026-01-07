@@ -6,25 +6,35 @@
     <title>InvesterMate - Smart Investment Platform</title>
     <meta name="description" content="InvesterMate - Your trusted investment platform for smart returns. Track your investments, earn rewards, and grow your wealth.">
     <meta name="author" content="InvesterMate" />
-    <meta name="theme-color" content="#0f1419" />
-
+    <meta name="theme-color" content="#10b981" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="InvesterMate" />
     
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
     
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@InvesterMate" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
     <meta property="og:title" content="InvesterMate - Smart Investment Platform">
-  <meta name="twitter:title" content="InvesterMate - Smart Investment Platform">
-  <meta property="og:description" content="InvesterMate - Your trusted investment platform for smart returns. Track your investments, earn rewards, and grow your wealth.">
-  <meta name="twitter:description" content="InvesterMate - Your trusted investment platform for smart returns. Track your investments, earn rewards, and grow your wealth.">
-  <link rel="icon" type="image/png" href="https://storage.googleapis.com/gpt-engineer-file-uploads/in1IkzUcdRXNdPHzj0jXuuWoXfu1/uploads/1767586534512-InvesterMate Logo.png">
-</head>
+    <meta name="twitter:title" content="InvesterMate - Smart Investment Platform">
+    <meta property="og:description" content="InvesterMate - Your trusted investment platform for smart returns. Track your investments, earn rewards, and grow your wealth.">
+    <meta name="twitter:description" content="InvesterMate - Your trusted investment platform for smart returns. Track your investments, earn rewards, and grow your wealth.">
+    <link rel="icon" type="image/png" href="https://storage.googleapis.com/gpt-engineer-file-uploads/in1IkzUcdRXNdPHzj0jXuuWoXfu1/uploads/1767586534512-InvesterMate Logo.png">
+  </head>
 
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js');
+        });
+      }
+    </script>
   </body>
 </html>

@@ -11,6 +11,9 @@ import ProductDetail from "./pages/ProductDetail";
 import Referrals from "./pages/Referrals";
 import Settings from "./pages/Settings";
 import Rewards from "./pages/Rewards";
+import Deposit from "./pages/Deposit";
+import Withdraw from "./pages/Withdraw";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -61,6 +64,9 @@ const AppRoutes = () => {
       <Route path="/referrals" element={<ProtectedRoute><Referrals /></ProtectedRoute>} />
       <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      <Route path="/deposit" element={<ProtectedRoute><Deposit /></ProtectedRoute>} />
+      <Route path="/withdraw" element={<ProtectedRoute><Withdraw /></ProtectedRoute>} />
+      <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

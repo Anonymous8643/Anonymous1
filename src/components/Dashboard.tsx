@@ -5,6 +5,8 @@ import { ProductCard } from "./ui/ProductCard";
 import { NoticeBoard } from "./ui/NoticeBoard";
 import { WalletCard } from "./ui/WalletCard";
 import { BottomNav } from "./ui/BottomNav";
+import { LiveActivityFeed } from "./LiveActivityFeed";
+import { InstallPrompt } from "./InstallPrompt";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useWallet } from "@/hooks/useWallet";
@@ -195,15 +197,18 @@ export const Dashboard = () => {
           <NoticeBoard notices={formattedNotices} />
         )}
 
+        {/* Live Activity Feed */}
+        <LiveActivityFeed />
+
         {/* Products Section */}
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display font-semibold text-lg">
               Available Products
             </h2>
-            <button className="text-sm text-primary hover:underline">
+            <Link to="/products" className="text-sm text-primary hover:underline">
               See all
-            </button>
+            </Link>
           </div>
           {productsLoading ? (
             <div className="space-y-4">
@@ -226,6 +231,9 @@ export const Dashboard = () => {
 
       {/* Bottom Navigation */}
       <BottomNav />
+      
+      {/* Install Prompt */}
+      <InstallPrompt />
     </div>
   );
 };

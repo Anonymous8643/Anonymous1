@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import logo from "@/assets/logo.png";
+import { InstallButton } from "@/components/InstallPrompt";
 
 const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
@@ -124,6 +125,11 @@ export default function Auth() {
           />
           <h1 className="text-3xl font-display font-bold gradient-text">InvesterMate</h1>
           <p className="text-muted-foreground mt-2">Your smart investment partner</p>
+          
+          {/* Install App Button */}
+          <div className="mt-4">
+            <InstallButton />
+          </div>
         </motion.div>
 
         {/* Form Card */}
