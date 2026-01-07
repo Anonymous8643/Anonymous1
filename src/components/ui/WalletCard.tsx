@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { ArrowDownLeft, ArrowUpRight, Eye, EyeOff, Wallet } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./button";
+import { useNavigate } from "react-router-dom";
 
 interface WalletCardProps {
   balance: number;
@@ -10,6 +11,7 @@ interface WalletCardProps {
 
 export const WalletCard = ({ balance, pendingReturns }: WalletCardProps) => {
   const [isVisible, setIsVisible] = useState(true);
+  const navigate = useNavigate();
 
   return (
     <motion.div
@@ -63,11 +65,15 @@ export const WalletCard = ({ balance, pendingReturns }: WalletCardProps) => {
         </motion.div>
 
         <div className="flex gap-3">
-          <Button className="flex-1 gap-2">
+          <Button className="flex-1 gap-2" onClick={() => navigate("/deposit")}>
             <ArrowDownLeft className="w-4 h-4" />
             Deposit
           </Button>
-          <Button variant="outline" className="flex-1 gap-2 border-primary/30 text-primary hover:bg-primary/10">
+          <Button 
+            variant="outline" 
+            className="flex-1 gap-2 border-primary/30 text-primary hover:bg-primary/10"
+            onClick={() => navigate("/withdraw")}
+          >
             <ArrowUpRight className="w-4 h-4" />
             Withdraw
           </Button>
