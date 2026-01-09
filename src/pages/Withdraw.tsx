@@ -43,11 +43,11 @@ export default function Withdraw() {
       return;
     }
 
-    if (withdrawAmount < 100) {
+    if (withdrawAmount < 500) {
       toast({
         variant: "destructive",
         title: "Minimum withdrawal",
-        description: "Minimum withdrawal amount is KES 100",
+        description: "Minimum withdrawal amount is KES 500",
       });
       return;
     }
@@ -189,7 +189,7 @@ export default function Withdraw() {
             disabled={
               createWithdrawal.isPending ||
               !amount ||
-              Number(amount) < 100 ||
+              Number(amount) < 500 ||
               Number(amount) > balance ||
               !phoneNumber ||
               withdrawalsFrozen
@@ -213,7 +213,7 @@ export default function Withdraw() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Minimum withdrawal:</span>
-              <span>KES 100</span>
+              <span>KES 500</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Transaction fee:</span>

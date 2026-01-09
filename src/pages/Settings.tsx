@@ -333,6 +333,26 @@ export default function Settings() {
           </h3>
 
           <div className="space-y-3">
+            <Link to="/privacy">
+              <Button variant="outline" className="w-full justify-between">
+                <span className="flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  Privacy Policy
+                </span>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </Link>
+
+            <Link to="/terms">
+              <Button variant="outline" className="w-full justify-between">
+                <span className="flex items-center gap-2">
+                  <Lock className="w-4 h-4" />
+                  Terms & Conditions
+                </span>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </Link>
+
             <Button variant="outline" className="w-full justify-between">
               <span className="flex items-center gap-2">
                 <Lock className="w-4 h-4" />

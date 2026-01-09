@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Clock, TrendingUp, Users, Flame, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Clock, TrendingUp, Users, Flame, CheckCircle, Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useProduct } from "@/hooks/useProducts";
-import { useCreateInvestment } from "@/hooks/useInvestments";
+import { useCreateInvestment, useInvestments } from "@/hooks/useInvestments";
 import { useWallet, useUpdateWallet } from "@/hooks/useWallet";
 import { useCreateTransaction } from "@/hooks/useTransactions";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +18,7 @@ export default function ProductDetail() {
   
   const { data: product, isLoading } = useProduct(id || "");
   const { data: wallet } = useWallet();
+  const { data: investments } = useInvestments();
   const createInvestment = useCreateInvestment();
   const updateWallet = useUpdateWallet();
   const createTransaction = useCreateTransaction();
@@ -25,6 +26,11 @@ export default function ProductDetail() {
   const [investmentAmount, setInvestmentAmount] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+
+  // Check if user already has an active investment in this product
+  const hasActiveInvestment = investments?.some(
+    inv => inv.product_id === id && inv.status === "active"
+  ) || false;
 
   // ROI Calculator
   const amount = Number(investmentAmount) || 0;
@@ -58,6 +64,15 @@ export default function ProductDetail() {
 
   const handleInvest = async () => {
     if (!product || !wallet) return;
+
+    if (hasActiveInvestment) {
+      toast({ 
+        variant: "destructive", 
+        title: "Active Investment Exists", 
+        description: "Complete your current investment in this product before investing again." 
+      });
+      return;
+    }
 
     const investAmount = Number(investmentAmount);
     if (investAmount < Number(product.price)) {
@@ -283,16 +298,36 @@ export default function ProductDetail() {
           </div>
         </div>
 
+        {/* Active Investment Warning */}
+        {hasActiveInvestment && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30"
+          >
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-yellow-500" />
+              <div>
+                <p className="font-medium text-yellow-500">Active Investment</p>
+                <p className="text-sm text-muted-foreground">
+                  You already have an active investment in this product. Wait for it to mature before investing again.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Available Balance */}
         <div className="flex justify-between items-center text-sm">
           <span className="text-muted-foreground">Available Balance</span>
+          <span className="font-medium">KES {Number(wallet?.balance || 0).toLocaleString()}</span>
           <span className="font-medium">KES {Number(wallet?.balance || 0).toLocaleString()}</span>
         </div>
 
         {/* Invest Button */}
         <Button 
           className="w-full h-14 text-lg font-semibold"
-          disabled={!amount || amount < Number(product.price) || createInvestment.isPending}
+          disabled={!amount || amount < Number(product.price) || createInvestment.isPending || hasActiveInvestment}
           onClick={handleInvest}
         >
           {createInvestment.isPending ? (

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { TrendingUp, Package, Clock, Award, LogOut, Flame } from "lucide-react";
+import { TrendingUp, Package, Clock, Award, LogOut, Flame, Newspaper } from "lucide-react";
 import { StatsCard } from "./ui/StatsCard";
 import { ProductCard } from "./ui/ProductCard";
 import { NoticeBoard } from "./ui/NoticeBoard";
@@ -9,6 +9,7 @@ import { LiveActivityFeed } from "./LiveActivityFeed";
 import { InstallPrompt } from "./InstallPrompt";
 import { EmergencyMessages } from "./EmergencyMessages";
 import { FreezeStatusBanner } from "./FreezeStatusBanner";
+import { ActiveInvestments } from "./ActiveInvestments";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useWallet } from "@/hooks/useWallet";
@@ -215,6 +216,28 @@ export const Dashboard = () => {
         ) : (
           <NoticeBoard notices={formattedNotices} />
         )}
+
+        {/* News Link */}
+        <Link to="/news">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="glass-card-hover p-4 flex items-center gap-4"
+          >
+            <div className="w-12 h-12 rounded-full bg-trust/20 flex items-center justify-center">
+              <Newspaper className="w-6 h-6 text-trust" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold">News & Updates</h3>
+              <p className="text-sm text-muted-foreground">Latest market news and articles about InvesterMate</p>
+            </div>
+          </motion.div>
+        </Link>
+
+        {/* Active Investments with Countdown */}
+        <ActiveInvestments />
 
         {/* Live Activity Feed */}
         <LiveActivityFeed />

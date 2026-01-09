@@ -402,6 +402,20 @@ export default function Admin() {
               <Button onClick={handleSetMaintenance} disabled={updateSetting.isPending}>
                 Set
               </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setMaintenanceMessage("");
+                  setMaintenanceEndTime("");
+                  updateSetting.mutate({
+                    key: "maintenance_message",
+                    value: { message: null, end_time: null },
+                  });
+                }}
+                disabled={updateSetting.isPending}
+              >
+                Clear
+              </Button>
             </div>
           </div>
         </motion.div>

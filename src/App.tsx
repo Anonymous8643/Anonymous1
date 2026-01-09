@@ -15,6 +15,9 @@ import Deposit from "./pages/Deposit";
 import Withdraw from "./pages/Withdraw";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Terms from "./pages/Terms";
+import News from "./pages/News";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +70,9 @@ const AppRoutes = () => {
       <Route path="/deposit" element={<ProtectedRoute><Deposit /></ProtectedRoute>} />
       <Route path="/withdraw" element={<ProtectedRoute><Withdraw /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+      <Route path="/news" element={<ProtectedRoute><News /></ProtectedRoute>} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/terms" element={<Terms />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
