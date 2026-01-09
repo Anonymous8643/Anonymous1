@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { motion } from "framer-motion";
 import { Clock, TrendingUp, Flame, Users } from "lucide-react";
 import { Button } from "./button";
@@ -19,7 +20,7 @@ interface ProductCardProps {
   delay?: number;
 }
 
-export const ProductCard = ({
+export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(({
   id,
   name,
   price,
@@ -31,12 +32,13 @@ export const ProductCard = ({
   category,
   imageUrl,
   delay = 0,
-}: ProductCardProps) => {
+}, ref) => {
   const navigate = useNavigate();
   const roi = ((expectedReturn - price) / price * 100).toFixed(1);
 
   return (
     <motion.div
+      ref={ref}
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.4, delay }}
@@ -132,4 +134,6 @@ export const ProductCard = ({
       </div>
     </motion.div>
   );
-};
+});
+
+ProductCard.displayName = "ProductCard";
