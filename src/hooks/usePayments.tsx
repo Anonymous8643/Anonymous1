@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api, Deposit, Withdrawal } from "@/lib/api";
 import { useAuth } from "./useAuth";
+
+export type { Deposit, Withdrawal };
 
 export const useUserDeposits = () => {
   const { user } = useAuth();
@@ -9,15 +11,8 @@ export const useUserDeposits = () => {
     queryKey: ["user_deposits", user?.id],
     queryFn: async () => {
       if (!user) return [];
-
-      const { data, error } = await supabase
-        .from("pending_deposits")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      return data;
+      const { deposits } = await api.deposits.list();
+      return deposits;
     },
     enabled: !!user,
   });
@@ -30,15 +25,8 @@ export const useUserWithdrawals = () => {
     queryKey: ["user_withdrawals", user?.id],
     queryFn: async () => {
       if (!user) return [];
-
-      const { data, error } = await supabase
-        .from("pending_withdrawals")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      return data;
+      const { withdrawals } = await api.withdrawals.list();
+      return withdrawals;
     },
     enabled: !!user,
   });
@@ -61,22 +49,13 @@ export const useCreateDeposit = () => {
       paymentNumberUsed: string;
     }) => {
       if (!user) throw new Error("Not authenticated");
-
-      const { data, error } = await supabase
-        .from("pending_deposits")
-        .insert({
-          user_id: user.id,
-          amount,
-          phone_number: phoneNumber,
-          mpesa_code: mpesaCode,
-          payment_number_used: paymentNumberUsed,
-          status: "pending",
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      const { deposit } = await api.deposits.create({
+        amount,
+        phoneNumber,
+        mpesaCode,
+        paymentNumberUsed,
+      });
+      return deposit;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user_deposits", user?.id] });
@@ -97,38 +76,8 @@ export const useCreateWithdrawal = () => {
       phoneNumber: string;
     }) => {
       if (!user) throw new Error("Not authenticated");
-
-      // First deduct from wallet
-      const { data: wallet, error: walletError } = await supabase
-        .from("wallets")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-
-      if (walletError) throw walletError;
-
-      if (Number(wallet.balance) < amount) {
-        throw new Error("Insufficient balance");
-      }
-
-      await supabase
-        .from("wallets")
-        .update({ balance: Number(wallet.balance) - amount })
-        .eq("user_id", user.id);
-
-      const { data, error } = await supabase
-        .from("pending_withdrawals")
-        .insert({
-          user_id: user.id,
-          amount,
-          phone_number: phoneNumber,
-          status: "pending",
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      const { withdrawal } = await api.withdrawals.create({ amount, phoneNumber });
+      return withdrawal;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user_withdrawals", user?.id] });

@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useProduct } from "@/hooks/useProducts";
 import { useCreateInvestment } from "@/hooks/useInvestments";
-import { useWallet, useUpdateWallet } from "@/hooks/useWallet";
-import { useCreateTransaction } from "@/hooks/useTransactions";
+import { useWallet } from "@/hooks/useWallet";
+import { useTransactions } from "@/hooks/useTransactions";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 

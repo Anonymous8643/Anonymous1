@@ -172,6 +172,39 @@ export type Database = {
           },
         ]
       }
+      market_news: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       notices: {
         Row: {
           created_at: string
@@ -376,6 +409,7 @@ export type Database = {
           created_at: string
           email: string | null
           full_name: string | null
+          hide_balance: boolean | null
           id: string
           phone: string | null
           referral_code: string | null
@@ -388,6 +422,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           full_name?: string | null
+          hide_balance?: boolean | null
           id?: string
           phone?: string | null
           referral_code?: string | null
@@ -400,6 +435,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           full_name?: string | null
+          hide_balance?: boolean | null
           id?: string
           phone?: string | null
           referral_code?: string | null

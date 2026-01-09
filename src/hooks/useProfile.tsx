@@ -1,19 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api, Profile } from "@/lib/api";
 import { useAuth } from "./useAuth";
 
-export interface Profile {
-  id: string;
-  user_id: string;
-  full_name: string | null;
-  email: string | null;
-  phone: string | null;
-  avatar_url: string | null;
-  referral_code: string | null;
-  referred_by: string | null;
-  created_at: string;
-  updated_at: string;
-}
+export type { Profile };
 
 export const useProfile = () => {
   const { user } = useAuth();
@@ -22,15 +11,8 @@ export const useProfile = () => {
     queryKey: ["profile", user?.id],
     queryFn: async () => {
       if (!user) return null;
-
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (error) throw error;
-      return data as Profile | null;
+      const { profile } = await api.profile.get();
+      return profile;
     },
     enabled: !!user,
   });
@@ -43,16 +25,24 @@ export const useUpdateProfile = () => {
   return useMutation({
     mutationFn: async (updates: Partial<Profile>) => {
       if (!user) throw new Error("Not authenticated");
+      const { profile } = await api.profile.update(updates);
+      return profile;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profile", user?.id] });
+    },
+  });
+};
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .update(updates)
-        .eq("user_id", user.id)
-        .select()
-        .single();
+export const useToggleHideBalance = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
 
-      if (error) throw error;
-      return data;
+  return useMutation({
+    mutationFn: async (hideBalance: boolean) => {
+      if (!user) throw new Error("Not authenticated");
+      const { profile } = await api.profile.update({ hide_balance: hideBalance });
+      return profile;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile", user?.id] });
