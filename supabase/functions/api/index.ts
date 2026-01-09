@@ -1414,10 +1414,15 @@ async function handleAdmin(
     }
     case "updatePlatformSetting": {
       const { key, value } = body as { key: string; value: Record<string, unknown> };
+      
+      // Use upsert to create if not exists
       const { error } = await adminClient
         .from("platform_settings")
-        .update({ value, updated_by: adminId, updated_at: new Date().toISOString() })
-        .eq("key", key);
+        .upsert(
+          { key, value, updated_by: adminId, updated_at: new Date().toISOString() },
+          { onConflict: 'key' }
+        );
+      
       if (error) return jsonError(error.message, 400);
       
       await adminClient.from("admin_audit_log").insert({

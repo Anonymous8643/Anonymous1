@@ -68,8 +68,13 @@ const CountdownTimer = ({ endTime }: { endTime: string }) => {
 };
 
 export const FreezeStatusBanner = () => {
-  const { depositsFrozen, withdrawalsFrozen, maintenanceMessage, maintenanceEndTime } = useFreezeStatus();
+  const { depositsFrozen, withdrawalsFrozen, maintenanceMessage, maintenanceEndTime, isLoading } = useFreezeStatus();
   const [dismissed, setDismissed] = useState(false);
+
+  // Don't show while loading
+  if (isLoading) {
+    return null;
+  }
 
   // Don't show if nothing is frozen and no maintenance message
   if (!depositsFrozen && !withdrawalsFrozen && !maintenanceMessage) {

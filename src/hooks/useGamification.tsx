@@ -30,7 +30,7 @@ export const STREAK_REWARDS: Record<number, number> = {
 
 // Hooks
 export const useUserStreak = () => {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
 
   return useQuery({
     queryKey: ["user-streak", user?.id],
@@ -39,7 +39,7 @@ export const useUserStreak = () => {
       const { streak } = await api.gamification.getStreak();
       return streak;
     },
-    enabled: !!user,
+    enabled: !!user && !!session?.access_token,
   });
 };
 
@@ -127,7 +127,7 @@ export const useAchievements = () => {
 };
 
 export const useUserAchievements = () => {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
 
   return useQuery({
     queryKey: ["user-achievements", user?.id],
@@ -136,12 +136,12 @@ export const useUserAchievements = () => {
       const { achievements } = await api.gamification.getAchievements();
       return achievements;
     },
-    enabled: !!user,
+    enabled: !!user && !!session?.access_token,
   });
 };
 
 export const useUserLevel = () => {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
 
   return useQuery({
     queryKey: ["user-level", user?.id],
@@ -150,7 +150,7 @@ export const useUserLevel = () => {
       const { level } = await api.gamification.getLevel();
       return level;
     },
-    enabled: !!user,
+    enabled: !!user && !!session?.access_token,
   });
 };
 
@@ -204,7 +204,7 @@ export const useWeeklyChallenges = () => {
 };
 
 export const useUserChallenges = () => {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
 
   return useQuery({
     queryKey: ["user-challenges", user?.id],
@@ -213,7 +213,7 @@ export const useUserChallenges = () => {
       const { challenges } = await api.gamification.getChallenges();
       return challenges;
     },
-    enabled: !!user,
+    enabled: !!user && !!session?.access_token,
   });
 };
 
@@ -233,7 +233,7 @@ export const useJoinChallenge = () => {
 };
 
 export const useTodaySpins = () => {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const today = new Date().toISOString().split("T")[0];
 
   return useQuery({
@@ -243,7 +243,7 @@ export const useTodaySpins = () => {
       const { spin, hasSpun } = await api.gamification.getTodaySpin();
       return hasSpun && spin ? [spin] : [];
     },
-    enabled: !!user,
+    enabled: !!user && !!session?.access_token,
   });
 };
 
