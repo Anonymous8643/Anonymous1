@@ -577,6 +577,214 @@ async function handleGamification(
       if (error) return jsonError(error.message, 400);
       return jsonSuccess({ challenges: data });
     }
+    case "claimStreakReward": {
+      const { streakDay, rewardAmount } = body as { streakDay: number; rewardAmount: number };
+      
+      // Check if reward already claimed for this streak day
+      const today = new Date().toISOString().split("T")[0];
+      const { data: existingReward } = await adminClient
+        .from("streak_rewards")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("streak_day", streakDay)
+        .gte("claimed_at", today)
+        .maybeSingle();
+      
+      if (existingReward) {
+        return jsonSuccess({ reward: { amount: 0 }, alreadyClaimed: true });
+      }
+      
+      // Add reward to wallet
+      const { data: wallet } = await adminClient
+        .from("wallets")
+        .select("balance")
+        .eq("user_id", userId)
+        .single();
+      
+      if (wallet) {
+        await adminClient
+          .from("wallets")
+          .update({ balance: Number(wallet.balance) + rewardAmount })
+          .eq("user_id", userId);
+        
+        // Create transaction
+        await adminClient.from("transactions").insert({
+          user_id: userId,
+          type: "streak_reward",
+          amount: rewardAmount,
+          description: `Day ${streakDay} streak reward`,
+          status: "completed",
+        });
+        
+        // Record the streak reward claim
+        await adminClient.from("streak_rewards").insert({
+          user_id: userId,
+          streak_day: streakDay,
+          reward_amount: rewardAmount,
+        });
+      }
+      
+      return jsonSuccess({ reward: { amount: rewardAmount } });
+    }
+    case "joinChallenge": {
+      const { challengeId } = body as { challengeId: string };
+      
+      // Check if already joined
+      const { data: existing } = await adminClient
+        .from("user_challenges")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("challenge_id", challengeId)
+        .maybeSingle();
+      
+      if (existing) {
+        return jsonError("Already joined this challenge", 400);
+      }
+      
+      const { data: challenge, error } = await adminClient
+        .from("user_challenges")
+        .insert({
+          user_id: userId,
+          challenge_id: challengeId,
+          current_progress: 0,
+          completed: false,
+        })
+        .select("*, weekly_challenges(*)")
+        .single();
+      
+      if (error) return jsonError(error.message, 400);
+      return jsonSuccess({ challenge });
+    }
+    case "claimChallengeReward": {
+      const { challengeId } = body as { challengeId: string };
+      
+      const { data: userChallenge } = await adminClient
+        .from("user_challenges")
+        .select("*, weekly_challenges(*)")
+        .eq("user_id", userId)
+        .eq("challenge_id", challengeId)
+        .single();
+      
+      if (!userChallenge) return jsonError("Challenge not found", 400);
+      if (!userChallenge.completed) return jsonError("Challenge not completed", 400);
+      if (userChallenge.reward_claimed) return jsonError("Reward already claimed", 400);
+      
+      const rewardAmount = userChallenge.weekly_challenges?.reward_amount || 0;
+      
+      // Add reward to wallet
+      const { data: wallet } = await adminClient
+        .from("wallets")
+        .select("balance")
+        .eq("user_id", userId)
+        .single();
+      
+      if (wallet && rewardAmount > 0) {
+        await adminClient
+          .from("wallets")
+          .update({ balance: Number(wallet.balance) + rewardAmount })
+          .eq("user_id", userId);
+        
+        await adminClient.from("transactions").insert({
+          user_id: userId,
+          type: "challenge_reward",
+          amount: rewardAmount,
+          description: `Challenge completed: ${userChallenge.weekly_challenges?.title}`,
+          status: "completed",
+        });
+      }
+      
+      await adminClient
+        .from("user_challenges")
+        .update({ reward_claimed: true })
+        .eq("id", userChallenge.id);
+      
+      return jsonSuccess({ success: true });
+    }
+    case "checkAchievements": {
+      // Get all achievements
+      const { data: achievements } = await adminClient
+        .from("achievements")
+        .select("*")
+        .eq("is_active", true);
+      
+      // Get user's current achievements
+      const { data: userAchievements } = await adminClient
+        .from("user_achievements")
+        .select("achievement_id")
+        .eq("user_id", userId);
+      
+      const earnedIds = new Set(userAchievements?.map(ua => ua.achievement_id) || []);
+      
+      // Get user stats for checking requirements
+      const [investmentsRes, depositsRes, referralsRes, streakRes] = await Promise.all([
+        adminClient.from("investments").select("amount").eq("user_id", userId).eq("status", "active"),
+        adminClient.from("pending_deposits").select("amount").eq("user_id", userId).eq("status", "approved"),
+        adminClient.from("referrals").select("id").eq("referrer_id", userId),
+        adminClient.from("user_streaks").select("current_streak, longest_streak").eq("user_id", userId).single(),
+      ]);
+      
+      const totalInvested = investmentsRes.data?.reduce((sum, i) => sum + Number(i.amount), 0) || 0;
+      const totalDeposited = depositsRes.data?.reduce((sum, d) => sum + Number(d.amount), 0) || 0;
+      const referralCount = referralsRes.data?.length || 0;
+      const longestStreak = streakRes.data?.longest_streak || 0;
+      
+      const newAchievements: any[] = [];
+      
+      for (const achievement of achievements || []) {
+        if (earnedIds.has(achievement.id)) continue;
+        
+        let earned = false;
+        switch (achievement.requirement_type) {
+          case "total_invested":
+            earned = totalInvested >= achievement.requirement_value;
+            break;
+          case "total_deposited":
+            earned = totalDeposited >= achievement.requirement_value;
+            break;
+          case "referral_count":
+            earned = referralCount >= achievement.requirement_value;
+            break;
+          case "streak_days":
+            earned = longestStreak >= achievement.requirement_value;
+            break;
+        }
+        
+        if (earned) {
+          await adminClient.from("user_achievements").insert({
+            user_id: userId,
+            achievement_id: achievement.id,
+          });
+          
+          // Add XP and reward
+          if (achievement.reward_amount > 0) {
+            const { data: wallet } = await adminClient
+              .from("wallets")
+              .select("balance")
+              .eq("user_id", userId)
+              .single();
+            
+            if (wallet) {
+              await adminClient
+                .from("wallets")
+                .update({ balance: Number(wallet.balance) + achievement.reward_amount })
+                .eq("user_id", userId);
+              
+              await adminClient.from("transactions").insert({
+                user_id: userId,
+                type: "achievement_reward",
+                amount: achievement.reward_amount,
+                description: `Achievement unlocked: ${achievement.title}`,
+                status: "completed",
+              });
+            }
+          }
+          
+          newAchievements.push(achievement);
+        }
+      }
+      
+      return jsonSuccess({ newAchievements });
+    }
     default:
       return jsonError("Invalid gamification action", 400);
   }
@@ -636,35 +844,13 @@ async function handleReferrals(
         .update({ referred_by: referrer.id })
         .eq("user_id", userId);
       
-      // Create referral record
+      // Create referral record with pending status - reward given on first deposit
       await adminClient.from("referrals").insert({
         referrer_id: referrer.id,
         referred_id: currentProfile.id,
-        status: "completed",
+        status: "pending", // Will be changed to completed/rewarded on first deposit
         reward_amount: 100,
       });
-      
-      // Award 100 KES to referrer
-      const { data: referrerWallet } = await adminClient
-        .from("wallets")
-        .select("balance")
-        .eq("user_id", referrer.user_id)
-        .single();
-      
-      if (referrerWallet) {
-        await adminClient
-          .from("wallets")
-          .update({ balance: Number(referrerWallet.balance) + 100 })
-          .eq("user_id", referrer.user_id);
-        
-        await adminClient.from("transactions").insert({
-          user_id: referrer.user_id,
-          type: "referral_bonus",
-          amount: 100,
-          description: `Referral bonus`,
-          status: "completed",
-        });
-      }
       
       return jsonSuccess({ success: true });
     }
@@ -879,6 +1065,58 @@ async function handleAdmin(
           description: `M-PESA Deposit - ${deposit.mpesa_code || "Manual"}`,
           status: "completed",
         });
+        
+        // Check if this is user's first deposit and they have a pending referral
+        // If so, reward the referrer
+        const { data: profile } = await adminClient
+          .from("profiles")
+          .select("id, referred_by")
+          .eq("user_id", deposit.user_id)
+          .single();
+        
+        if (profile?.referred_by) {
+          // Check for pending referral
+          const { data: pendingReferral } = await adminClient
+            .from("referrals")
+            .select("*, referrer:referrer_id(user_id)")
+            .eq("referred_id", profile.id)
+            .eq("status", "pending")
+            .single();
+          
+          if (pendingReferral && pendingReferral.referrer) {
+            const referrerUserId = (pendingReferral.referrer as any).user_id;
+            
+            // Get referrer wallet and add bonus
+            const { data: referrerWallet } = await adminClient
+              .from("wallets")
+              .select("balance")
+              .eq("user_id", referrerUserId)
+              .single();
+            
+            if (referrerWallet) {
+              const bonusAmount = pendingReferral.reward_amount || 100;
+              
+              await adminClient
+                .from("wallets")
+                .update({ balance: Number(referrerWallet.balance) + bonusAmount })
+                .eq("user_id", referrerUserId);
+              
+              await adminClient.from("transactions").insert({
+                user_id: referrerUserId,
+                type: "referral_bonus",
+                amount: bonusAmount,
+                description: `Referral bonus - New user deposited`,
+                status: "completed",
+              });
+              
+              // Update referral status to rewarded
+              await adminClient
+                .from("referrals")
+                .update({ status: "rewarded" })
+                .eq("id", pendingReferral.id);
+            }
+          }
+        }
       }
       
       await adminClient.from("admin_audit_log").insert({

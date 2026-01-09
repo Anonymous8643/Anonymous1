@@ -123,6 +123,14 @@ class ApiClient {
       this.request<{ spin: SpinHistory; prizeValue: number }>("gamification", "spin", { prizeType, prizeValue }),
     getAchievements: () => this.request<{ achievements: UserAchievement[] }>("gamification", "getAchievements", {}),
     getChallenges: () => this.request<{ challenges: UserChallenge[] }>("gamification", "getChallenges", {}),
+    claimStreakReward: (streakDay: number, rewardAmount: number) =>
+      this.request<{ reward: { amount: number } }>("gamification", "claimStreakReward", { streakDay, rewardAmount }),
+    joinChallenge: (challengeId: string) =>
+      this.request<{ challenge: UserChallenge }>("gamification", "joinChallenge", { challengeId }),
+    claimChallengeReward: (challengeId: string) =>
+      this.request<{ success: boolean }>("gamification", "claimChallengeReward", { challengeId }),
+    checkAchievements: () =>
+      this.request<{ newAchievements: Achievement[] }>("gamification", "checkAchievements", {}),
   };
 
   // Referrals endpoints

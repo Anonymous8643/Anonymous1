@@ -59,11 +59,13 @@ export const useUpdateStreak = () => {
           last_login_date: today,
           total_login_days: 1,
         });
-        return { data: streak, isNewDay: true, streakBroken: false };
+        // Check if day 1 has a reward
+        const reward = STREAK_REWARDS[1] || 0;
+        return { data: streak, isNewDay: true, streakBroken: false, streakReward: reward };
       }
 
       if (currentStreak.last_login_date === today) {
-        return { data: currentStreak, isNewDay: false, streakBroken: false };
+        return { data: currentStreak, isNewDay: false, streakBroken: false, streakReward: 0 };
       }
 
       const lastLogin = currentStreak.last_login_date ? new Date(currentStreak.last_login_date) : null;
@@ -87,9 +89,28 @@ export const useUpdateStreak = () => {
         total_login_days: currentStreak.total_login_days + 1,
       });
 
-      return { data: streak, isNewDay: true, streakBroken };
+      // Check if this streak day has a reward
+      const reward = STREAK_REWARDS[newStreak] || 0;
+      return { data: streak, isNewDay: true, streakBroken, streakReward: reward };
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-streak", user?.id] });
+    },
+  });
+};
+
+// Claim streak reward - adds to wallet
+export const useClaimStreakReward = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ streakDay, rewardAmount }: { streakDay: number; rewardAmount: number }) => {
+      const { reward } = await api.gamification.claimStreakReward(streakDay, rewardAmount);
+      return reward;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wallet", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["user-streak", user?.id] });
     },
   });

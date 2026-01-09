@@ -359,6 +359,7 @@ export const useUploadImage = () => {
   });
 };
 
+// Public hook for live activity - no auth required
 export const useRecentInvestments = () => {
   return useQuery({
     queryKey: ["recent_investments_public"],
@@ -367,5 +368,6 @@ export const useRecentInvestments = () => {
       return investments;
     },
     refetchInterval: 30000,
+    staleTime: 10000,
   });
 };

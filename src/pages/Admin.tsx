@@ -97,6 +97,10 @@ export default function Admin() {
   const [adjustReason, setAdjustReason] = useState("");
   const [selectedUser, setSelectedUser] = useState<any>(null);
   
+  // Community link state
+  const [communityUrl, setCommunityUrl] = useState("");
+  const [communityName, setCommunityName] = useState("Community Groups");
+  
   // Emergency message state
   const [newEmergencyTitle, setNewEmergencyTitle] = useState("");
   const [newEmergencyMessage, setNewEmergencyMessage] = useState("");
@@ -410,6 +414,53 @@ export default function Admin() {
                   updateSetting.mutate({
                     key: "maintenance_message",
                     value: { message: null, end_time: null },
+                  });
+                }}
+                disabled={updateSetting.isPending}
+              >
+                Clear
+              </Button>
+            </div>
+          </div>
+          
+          {/* Community Link */}
+          <div className="mt-4 p-3 rounded-lg bg-muted/30 space-y-3">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">Community Groups Link</span>
+            </div>
+            <Input
+              placeholder="Group name (e.g. 'WhatsApp Community')"
+              value={communityName}
+              onChange={(e) => setCommunityName(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <Input
+                placeholder="https://chat.whatsapp.com/..."
+                value={communityUrl}
+                onChange={(e) => setCommunityUrl(e.target.value)}
+                className="flex-1"
+              />
+              <Button 
+                onClick={() => {
+                  updateSetting.mutate({
+                    key: "community_link",
+                    value: { url: communityUrl, name: communityName },
+                  });
+                  toast({ title: "Community link updated" });
+                }}
+                disabled={updateSetting.isPending}
+              >
+                Save
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setCommunityUrl("");
+                  setCommunityName("Community Groups");
+                  updateSetting.mutate({
+                    key: "community_link",
+                    value: { url: null, name: null },
                   });
                 }}
                 disabled={updateSetting.isPending}

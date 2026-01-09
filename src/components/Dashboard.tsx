@@ -10,19 +10,21 @@ import { InstallPrompt } from "./InstallPrompt";
 import { EmergencyMessages } from "./EmergencyMessages";
 import { FreezeStatusBanner } from "./FreezeStatusBanner";
 import { ActiveInvestments } from "./ActiveInvestments";
+import { CommunityLink } from "./CommunityLink";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useWallet } from "@/hooks/useWallet";
 import { useProducts } from "@/hooks/useProducts";
 import { useNotices } from "@/hooks/useNotices";
 import { useInvestments } from "@/hooks/useInvestments";
-import { useUserStreak, useUserLevel, useUpdateStreak } from "@/hooks/useGamification";
+import { useUserStreak, useUserLevel, useUpdateStreak, useClaimStreakReward } from "@/hooks/useGamification";
 import { Skeleton } from "./ui/skeleton";
 import { Button } from "./ui/button";
 import { formatDistanceToNow } from "date-fns";
 import logo from "@/assets/logo.png";
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 import { useProcessReferral } from "@/hooks/useProcessReferral";
 
@@ -36,12 +38,24 @@ export const Dashboard = () => {
   const { data: streak } = useUserStreak();
   const { data: level } = useUserLevel();
   const { mutate: updateStreak } = useUpdateStreak();
+  const { mutate: claimStreakReward } = useClaimStreakReward();
   const { mutateAsync: processReferral } = useProcessReferral();
+  const { toast } = useToast();
 
   // Update streak and process pending referral on dashboard load
   useEffect(() => {
     if (user && streak !== undefined) {
-      updateStreak();
+      updateStreak(undefined, {
+        onSuccess: (data) => {
+          if (data?.isNewDay && data?.streakReward) {
+            claimStreakReward({ streakDay: data.data?.current_streak || 1, rewardAmount: data.streakReward });
+            toast({
+              title: "🎉 Streak Reward!",
+              description: `You earned KES ${data.streakReward} for your ${data.data?.current_streak} day streak!`,
+            });
+          }
+        }
+      });
       
       // Process pending referral code if exists
       const pendingReferralCode = localStorage.getItem("pendingReferralCode");
@@ -235,6 +249,9 @@ export const Dashboard = () => {
             </div>
           </motion.div>
         </Link>
+
+        {/* Community Groups Link */}
+        <CommunityLink />
 
         {/* Active Investments with Countdown */}
         <ActiveInvestments />
