@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Phone, Copy, CheckCircle, AlertCircle, Clock, Loader2, MessageCircle } from "lucide-react";
+import { ArrowLeft, Phone, Copy, CheckCircle, AlertCircle, Clock, Loader2, MessageCircle, Lock } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { useCurrentPaymentNumber } from "@/hooks/useAdmin";
 import { useCreateDeposit, useUserDeposits } from "@/hooks/usePayments";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
+import { FreezeStatusBanner, useFreezeStatus } from "@/components/FreezeStatusBanner";
 import logo from "@/assets/logo.png";
 import { formatDistanceToNow } from "date-fns";
 
@@ -26,6 +27,7 @@ export default function Deposit() {
   const createDeposit = useCreateDeposit();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { depositsFrozen } = useFreezeStatus();
 
   const handleCopy = () => {
     if (paymentNumber) {
@@ -79,6 +81,8 @@ export default function Deposit() {
       </header>
 
       <main className="px-4 py-6 max-w-lg mx-auto space-y-6">
+        {/* Freeze Status Banner */}
+        <FreezeStatusBanner />
         {/* Pending Deposits */}
         {pendingDeposits.length > 0 && (
           <motion.div
@@ -153,9 +157,16 @@ export default function Deposit() {
                 className="w-full"
                 size="lg"
                 onClick={() => setStep("instructions")}
-                disabled={!amount || Number(amount) < 100 || !phoneNumber}
+                disabled={!amount || Number(amount) < 100 || !phoneNumber || depositsFrozen}
               >
-                Continue to Payment
+                {depositsFrozen ? (
+                  <>
+                    <Lock className="w-4 h-4 mr-2" />
+                    Deposits Paused
+                  </>
+                ) : (
+                  "Continue to Payment"
+                )}
               </Button>
             </div>
           </motion.div>

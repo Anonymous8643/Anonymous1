@@ -1,8 +1,10 @@
 import { motion } from "framer-motion";
-import { ArrowDownLeft, ArrowUpRight, Eye, EyeOff, Wallet } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Eye, EyeOff, Wallet, Lock } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./button";
 import { useNavigate } from "react-router-dom";
+import { useFreezeStatus } from "@/components/FreezeStatusBanner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
 
 interface WalletCardProps {
   balance: number;
@@ -12,6 +14,7 @@ interface WalletCardProps {
 export const WalletCard = ({ balance, pendingReturns }: WalletCardProps) => {
   const [isVisible, setIsVisible] = useState(true);
   const navigate = useNavigate();
+  const { depositsFrozen, withdrawalsFrozen } = useFreezeStatus();
 
   return (
     <motion.div
@@ -65,18 +68,58 @@ export const WalletCard = ({ balance, pendingReturns }: WalletCardProps) => {
         </motion.div>
 
         <div className="flex gap-3">
-          <Button className="flex-1 gap-2" onClick={() => navigate("/deposit")}>
-            <ArrowDownLeft className="w-4 h-4" />
-            Deposit
-          </Button>
-          <Button 
-            variant="outline" 
-            className="flex-1 gap-2 border-primary/30 text-primary hover:bg-primary/10"
-            onClick={() => navigate("/withdraw")}
-          >
-            <ArrowUpRight className="w-4 h-4" />
-            Withdraw
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex-1">
+                  <Button 
+                    className="w-full gap-2" 
+                    onClick={() => navigate("/deposit")}
+                    disabled={depositsFrozen}
+                  >
+                    {depositsFrozen ? (
+                      <Lock className="w-4 h-4" />
+                    ) : (
+                      <ArrowDownLeft className="w-4 h-4" />
+                    )}
+                    Deposit
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {depositsFrozen && (
+                <TooltipContent>
+                  <p>Deposits are temporarily paused</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex-1">
+                  <Button 
+                    variant="outline" 
+                    className="w-full gap-2 border-primary/30 text-primary hover:bg-primary/10"
+                    onClick={() => navigate("/withdraw")}
+                    disabled={withdrawalsFrozen}
+                  >
+                    {withdrawalsFrozen ? (
+                      <Lock className="w-4 h-4" />
+                    ) : (
+                      <ArrowUpRight className="w-4 h-4" />
+                    )}
+                    Withdraw
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {withdrawalsFrozen && (
+                <TooltipContent>
+                  <p>Withdrawals are temporarily paused</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
     </motion.div>

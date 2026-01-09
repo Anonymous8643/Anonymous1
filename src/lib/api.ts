@@ -149,6 +149,8 @@ class ApiClient {
       this.request<{ success: boolean }>("admin", "addPaymentNumber", { phone, name }),
     togglePaymentNumber: (id: string, isActive: boolean) =>
       this.request<{ success: boolean }>("admin", "togglePaymentNumber", { id, isActive }),
+    deletePaymentNumber: (id: string) =>
+      this.request<{ success: boolean }>("admin", "deletePaymentNumber", { id }),
     getEmergencyMessages: () => this.request<{ messages: EmergencyMessage[] }>("admin", "getEmergencyMessages", {}),
     createEmergencyMessage: (title: string, message: string, imageUrl?: string, expiresAt?: string) =>
       this.request<{ success: boolean }>("admin", "createEmergencyMessage", { title, message, imageUrl, expiresAt }),
@@ -452,6 +454,11 @@ export interface AdminUser {
   updated_at: string;
   wallets?: { balance: number; total_invested: number; total_returns: number }[];
   user_roles?: { role: string }[];
+  user_levels?: { current_level: number; level_title: string; total_xp: number }[];
+  badges_count?: number;
+  active_investments_count?: number;
+  pending_deposits_count?: number;
+  pending_withdrawals_count?: number;
 }
 
 export const api = new ApiClient();

@@ -173,6 +173,21 @@ export const useTogglePaymentNumber = () => {
   });
 };
 
+export const useDeletePaymentNumber = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      await api.admin.deletePaymentNumber(id);
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all_payment_numbers"] });
+      queryClient.invalidateQueries({ queryKey: ["payment_numbers"] });
+    },
+  });
+};
+
 export const usePlatformStats = () => {
   const { data: isAdmin } = useIsAdmin();
 

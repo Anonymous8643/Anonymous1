@@ -8,6 +8,7 @@ import { BottomNav } from "./ui/BottomNav";
 import { LiveActivityFeed } from "./LiveActivityFeed";
 import { InstallPrompt } from "./InstallPrompt";
 import { EmergencyMessages } from "./EmergencyMessages";
+import { FreezeStatusBanner } from "./FreezeStatusBanner";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useWallet } from "@/hooks/useWallet";
@@ -160,13 +161,16 @@ export const Dashboard = () => {
 
       {/* Main Content */}
       <main className="px-4 py-6 max-w-lg mx-auto space-y-6">
+        {/* Freeze Status Banner */}
+        <FreezeStatusBanner />
+
         {/* Wallet Card */}
         {walletLoading ? (
           <Skeleton className="h-48 w-full rounded-2xl" />
         ) : (
           <WalletCard 
             balance={Number(wallet?.balance || 0)} 
-            pendingReturns={pendingReturns} 
+            pendingReturns={pendingReturns}
           />
         )}
 

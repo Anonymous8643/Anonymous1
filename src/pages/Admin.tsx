@@ -4,7 +4,8 @@ import {
   Users, Wallet, Phone, CheckCircle, XCircle, 
   Plus, AlertTriangle, TrendingUp, TrendingDown,
   Search, ArrowLeft, Shield, MessageSquare, BarChart3,
-  Newspaper, Bell, PauseCircle, PlayCircle, Image, Upload
+  Newspaper, Bell, PauseCircle, PlayCircle, Image, Upload,
+  Trash2, Award, ChevronLeft, ChevronRight, Timer
 } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { 
   useIsAdmin, 
   usePendingDeposits, 
@@ -24,6 +26,7 @@ import {
   useAllPaymentNumbers,
   useAddPaymentNumber,
   useTogglePaymentNumber,
+  useDeletePaymentNumber,
   usePlatformStats,
   useAllMarketNews,
   useCreateMarketNews,
@@ -75,6 +78,7 @@ export default function Admin() {
   const updateBalance = useUpdateUserBalance();
   const addNumber = useAddPaymentNumber();
   const toggleNumber = useTogglePaymentNumber();
+  const deleteNumber = useDeletePaymentNumber();
   const createEmergency = useCreateEmergencyMessage();
   const toggleEmergency = useToggleEmergencyMessage();
   const createNews = useCreateMarketNews();
@@ -86,6 +90,7 @@ export default function Admin() {
   const { toast } = useToast();
 
   const [searchUser, setSearchUser] = useState("");
+  const [userPage, setUserPage] = useState(0);
   const [newPhone, setNewPhone] = useState("");
   const [newPhoneName, setNewPhoneName] = useState("InvesterMate");
   const [adjustAmount, setAdjustAmount] = useState("");
@@ -107,10 +112,17 @@ export default function Admin() {
   const [newNoticeTitle, setNewNoticeTitle] = useState("");
   const [newNoticeMessage, setNewNoticeMessage] = useState("");
   const [newNoticeType, setNewNoticeType] = useState("info");
+  
+  // Maintenance message state
+  const [maintenanceMessage, setMaintenanceMessage] = useState("");
+  const [maintenanceEndTime, setMaintenanceEndTime] = useState("");
 
   // Get freeze status
   const depositsFrozen = platformSettings?.find(s => s.key === "deposits_frozen")?.value?.frozen ?? false;
   const withdrawalsFrozen = platformSettings?.find(s => s.key === "withdrawals_frozen")?.value?.frozen ?? false;
+
+  // User pagination
+  const USERS_PER_PAGE = 20;
 
   if (checkingAdmin) {
     return (
@@ -140,6 +152,10 @@ export default function Admin() {
       u.email?.toLowerCase().includes(searchUser.toLowerCase()) ||
       u.phone?.includes(searchUser)
   );
+
+  const totalFilteredUsers = filteredUsers?.length || 0;
+  const paginatedUsers = filteredUsers?.slice(userPage * USERS_PER_PAGE, (userPage + 1) * USERS_PER_PAGE);
+  const totalPages = Math.ceil(totalFilteredUsers / USERS_PER_PAGE);
 
   const handleApproveDeposit = async (id: string, approve: boolean) => {
     try {
@@ -275,6 +291,35 @@ export default function Admin() {
     }
   };
 
+  const handleSetMaintenance = async () => {
+    try {
+      await updateSetting.mutateAsync({
+        key: "maintenance_message",
+        value: { 
+          message: maintenanceMessage || null, 
+          end_time: maintenanceEndTime || null 
+        },
+      });
+      toast({
+        title: maintenanceMessage ? "Maintenance message set" : "Maintenance message cleared",
+        description: maintenanceMessage ? "Users will see this message" : "No maintenance message active",
+      });
+      setMaintenanceMessage("");
+      setMaintenanceEndTime("");
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to update maintenance message" });
+    }
+  };
+
+  const handleDeletePaymentNumber = async (id: string) => {
+    try {
+      await deleteNumber.mutateAsync({ id });
+      toast({ title: "Number deleted", description: "Payment number has been removed" });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to delete number" });
+    }
+  };
+
   return (
     <div className="min-h-screen pb-8">
       {/* Header */}
@@ -333,6 +378,30 @@ export default function Admin() {
                   disabled={updateSetting.isPending}
                 />
               </div>
+            </div>
+          </div>
+          
+          {/* Maintenance Message */}
+          <div className="mt-4 p-3 rounded-lg bg-muted/30 space-y-3">
+            <div className="flex items-center gap-2">
+              <Timer className="w-4 h-4 text-yellow-500" />
+              <span className="text-sm font-medium">Maintenance Message</span>
+            </div>
+            <Input
+              placeholder="Maintenance message for users..."
+              value={maintenanceMessage}
+              onChange={(e) => setMaintenanceMessage(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <Input
+                type="datetime-local"
+                value={maintenanceEndTime}
+                onChange={(e) => setMaintenanceEndTime(e.target.value)}
+                className="flex-1"
+              />
+              <Button onClick={handleSetMaintenance} disabled={updateSetting.isPending}>
+                Set
+              </Button>
             </div>
           </div>
         </motion.div>
@@ -551,68 +620,124 @@ export default function Admin() {
               />
             </div>
 
-            {filteredUsers?.slice(0, 20).map((user: any) => (
-              <div key={user.id} className="glass-card p-4 flex items-center justify-between">
-                <div>
-                  <p className="font-semibold">{user.full_name || "No name"}</p>
-                  <p className="text-sm text-muted-foreground">{user.email}</p>
-                  <p className="text-xs text-muted-foreground">{user.phone || "No phone"}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-profit">
-                    KES {Number(user.wallets?.[0]?.balance || 0).toLocaleString()}
-                  </p>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setSelectedUser(user)}
-                      >
-                        <Wallet className="w-4 h-4 mr-1" /> Adjust
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Adjust Balance - {user.full_name || user.email}</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                          <Label>Current Balance</Label>
-                          <p className="text-2xl font-bold">
-                            KES {Number(user.wallets?.[0]?.balance || 0).toLocaleString()}
-                          </p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Adjustment Amount (+/-)</Label>
-                          <Input
-                            type="number"
-                            placeholder="e.g. 1000 or -500"
-                            value={adjustAmount}
-                            onChange={(e) => setAdjustAmount(e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Reason</Label>
-                          <Input
-                            placeholder="Reason for adjustment"
-                            value={adjustReason}
-                            onChange={(e) => setAdjustReason(e.target.value)}
-                          />
-                        </div>
+            {paginatedUsers?.map((user: any) => (
+              <div key={user.id} className="glass-card p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-semibold truncate">{user.full_name || "No name"}</p>
+                      {user.user_levels?.[0] && (
+                        <Badge variant="secondary" className="text-xs">
+                          Lv.{user.user_levels[0].current_level}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+                    <p className="text-xs text-muted-foreground">{user.phone || "No phone"}</p>
+                    
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary">
+                        <Award className="w-3 h-3 inline mr-1" />
+                        {user.badges_count || 0} badges
+                      </span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-profit/20 text-profit">
+                        {user.active_investments_count || 0} investments
+                      </span>
+                      {(user.pending_deposits_count || 0) > 0 && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-500">
+                          {user.pending_deposits_count} pending deposits
+                        </span>
+                      )}
+                      {(user.pending_withdrawals_count || 0) > 0 && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-500">
+                          {user.pending_withdrawals_count} pending withdrawals
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="font-bold text-profit">
+                      KES {Number(user.wallets?.[0]?.balance || 0).toLocaleString()}
+                    </p>
+                    <Dialog>
+                      <DialogTrigger asChild>
                         <Button
-                          className="w-full"
-                          onClick={handleAdjustBalance}
-                          disabled={!adjustAmount || !adjustReason || updateBalance.isPending}
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setSelectedUser(user)}
                         >
-                          Apply Adjustment
+                          <Wallet className="w-4 h-4 mr-1" /> Adjust
                         </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Adjust Balance - {user.full_name || user.email}</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <Label>Current Balance</Label>
+                            <p className="text-2xl font-bold">
+                              KES {Number(user.wallets?.[0]?.balance || 0).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Adjustment Amount (+/-)</Label>
+                            <Input
+                              type="number"
+                              placeholder="e.g. 1000 or -500"
+                              value={adjustAmount}
+                              onChange={(e) => setAdjustAmount(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Reason</Label>
+                            <Input
+                              placeholder="Reason for adjustment"
+                              value={adjustReason}
+                              onChange={(e) => setAdjustReason(e.target.value)}
+                            />
+                          </div>
+                          <Button
+                            className="w-full"
+                            onClick={handleAdjustBalance}
+                            disabled={!adjustAmount || !adjustReason || updateBalance.isPending}
+                          >
+                            Apply Adjustment
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </div>
               </div>
             ))}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-4">
+                <p className="text-sm text-muted-foreground">
+                  Showing {userPage * USERS_PER_PAGE + 1}-{Math.min((userPage + 1) * USERS_PER_PAGE, totalFilteredUsers)} of {totalFilteredUsers}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setUserPage(p => Math.max(0, p - 1))}
+                    disabled={userPage === 0}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setUserPage(p => Math.min(totalPages - 1, p + 1))}
+                    disabled={userPage >= totalPages - 1}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="messages" className="space-y-4">
@@ -871,13 +996,24 @@ export default function Admin() {
                   </p>
                   <p className="text-sm text-muted-foreground">{num.account_name}</p>
                 </div>
-                <Button
-                  size="sm"
-                  variant={num.is_active ? "default" : "outline"}
-                  onClick={() => toggleNumber.mutate({ id: num.id, isActive: !num.is_active })}
-                >
-                  {num.is_active ? "Active" : "Inactive"}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant={num.is_active ? "default" : "outline"}
+                    onClick={() => toggleNumber.mutate({ id: num.id, isActive: !num.is_active })}
+                  >
+                    {num.is_active ? "Active" : "Inactive"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-destructive text-destructive"
+                    onClick={() => handleDeletePaymentNumber(num.id)}
+                    disabled={deleteNumber.isPending}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             ))}
           </TabsContent>

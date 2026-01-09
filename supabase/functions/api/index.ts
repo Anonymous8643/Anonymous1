@@ -726,12 +726,73 @@ async function handleAdmin(
       return jsonSuccess({ withdrawals: data });
     }
     case "getAllUsers": {
-      const { data, error } = await adminClient
+      // Fetch users with all related data
+      const { data: profiles, error } = await adminClient
         .from("profiles")
-        .select("*, wallets(balance, total_invested, total_returns), user_roles(role)")
+        .select("*, wallets(balance, total_invested, total_returns), user_roles(role), user_levels(current_level, level_title, total_xp)")
         .order("created_at", { ascending: false });
+      
       if (error) return jsonError(error.message, 400);
-      return jsonSuccess({ users: data });
+      
+      // Get user achievement counts
+      const userIds = profiles?.map((p: any) => p.user_id) || [];
+      
+      const [achievementsRes, investmentsRes, depositsRes, withdrawalsRes] = await Promise.all([
+        adminClient
+          .from("user_achievements")
+          .select("user_id")
+          .in("user_id", userIds),
+        adminClient
+          .from("investments")
+          .select("user_id, amount")
+          .eq("status", "active")
+          .in("user_id", userIds),
+        adminClient
+          .from("pending_deposits")
+          .select("user_id, status")
+          .eq("status", "pending")
+          .in("user_id", userIds),
+        adminClient
+          .from("pending_withdrawals")
+          .select("user_id, status")
+          .eq("status", "pending")
+          .in("user_id", userIds),
+      ]);
+      
+      // Count achievements per user
+      const achievementCounts: Record<string, number> = {};
+      achievementsRes.data?.forEach((a: any) => {
+        achievementCounts[a.user_id] = (achievementCounts[a.user_id] || 0) + 1;
+      });
+      
+      // Count active investments per user
+      const activeInvestmentCounts: Record<string, number> = {};
+      investmentsRes.data?.forEach((i: any) => {
+        activeInvestmentCounts[i.user_id] = (activeInvestmentCounts[i.user_id] || 0) + 1;
+      });
+      
+      // Count pending deposits per user
+      const pendingDepositCounts: Record<string, number> = {};
+      depositsRes.data?.forEach((d: any) => {
+        pendingDepositCounts[d.user_id] = (pendingDepositCounts[d.user_id] || 0) + 1;
+      });
+      
+      // Count pending withdrawals per user
+      const pendingWithdrawalCounts: Record<string, number> = {};
+      withdrawalsRes.data?.forEach((w: any) => {
+        pendingWithdrawalCounts[w.user_id] = (pendingWithdrawalCounts[w.user_id] || 0) + 1;
+      });
+      
+      // Enrich user data
+      const enrichedUsers = profiles?.map((user: any) => ({
+        ...user,
+        badges_count: achievementCounts[user.user_id] || 0,
+        active_investments_count: activeInvestmentCounts[user.user_id] || 0,
+        pending_deposits_count: pendingDepositCounts[user.user_id] || 0,
+        pending_withdrawals_count: pendingWithdrawalCounts[user.user_id] || 0,
+      }));
+      
+      return jsonSuccess({ users: enrichedUsers });
     }
     case "approveDeposit": {
       const { depositId, approve, adminNotes } = body as { 
@@ -921,6 +982,23 @@ async function handleAdmin(
       await adminClient.from("admin_audit_log").insert({
         admin_id: adminId,
         action: isActive ? "activate_payment_number" : "deactivate_payment_number",
+        target_table: "payment_numbers",
+        target_id: id,
+      });
+      
+      return jsonSuccess({ success: true });
+    }
+    case "deletePaymentNumber": {
+      const { id } = body as { id: string };
+      const { error } = await adminClient
+        .from("payment_numbers")
+        .delete()
+        .eq("id", id);
+      if (error) return jsonError(error.message, 400);
+      
+      await adminClient.from("admin_audit_log").insert({
+        admin_id: adminId,
+        action: "delete_payment_number",
         target_table: "payment_numbers",
         target_id: id,
       });

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Phone, CheckCircle, AlertCircle, Clock, Loader2, Wallet } from "lucide-react";
+import { ArrowLeft, Phone, CheckCircle, AlertCircle, Clock, Loader2, Wallet, Lock } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { useWallet } from "@/hooks/useWallet";
 import { useProfile } from "@/hooks/useProfile";
 import { useCreateWithdrawal, useUserWithdrawals } from "@/hooks/usePayments";
 import { useToast } from "@/hooks/use-toast";
+import { FreezeStatusBanner, useFreezeStatus } from "@/components/FreezeStatusBanner";
 import logo from "@/assets/logo.png";
 import { formatDistanceToNow } from "date-fns";
 
@@ -23,6 +24,7 @@ export default function Withdraw() {
   const createWithdrawal = useCreateWithdrawal();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { withdrawalsFrozen } = useFreezeStatus();
 
   const balance = Number(wallet?.balance || 0);
   const pendingWithdrawals = withdrawals?.filter((w) => w.status === "pending") || [];
@@ -87,6 +89,8 @@ export default function Withdraw() {
       </header>
 
       <main className="px-4 py-6 max-w-lg mx-auto space-y-6">
+        {/* Freeze Status Banner */}
+        <FreezeStatusBanner />
         {/* Balance Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -187,15 +191,18 @@ export default function Withdraw() {
               !amount ||
               Number(amount) < 100 ||
               Number(amount) > balance ||
-              !phoneNumber
+              !phoneNumber ||
+              withdrawalsFrozen
             }
           >
             {createWithdrawal.isPending ? (
               <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            ) : withdrawalsFrozen ? (
+              <Lock className="w-4 h-4 mr-2" />
             ) : (
               <CheckCircle className="w-4 h-4 mr-2" />
             )}
-            Request Withdrawal
+            {withdrawalsFrozen ? "Withdrawals Paused" : "Request Withdrawal"}
           </Button>
 
           {/* Info */}
