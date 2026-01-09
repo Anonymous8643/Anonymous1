@@ -68,58 +68,65 @@ export const WalletCard = ({ balance, pendingReturns }: WalletCardProps) => {
         </motion.div>
 
         <div className="flex gap-3">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="flex-1">
-                  <Button 
-                    className="w-full gap-2" 
-                    onClick={() => navigate("/deposit")}
-                    disabled={depositsFrozen}
-                  >
-                    {depositsFrozen ? (
+          {depositsFrozen ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex-1">
+                    <Button 
+                      className="w-full gap-2" 
+                      disabled
+                    >
                       <Lock className="w-4 h-4" />
-                    ) : (
-                      <ArrowDownLeft className="w-4 h-4" />
-                    )}
-                    Deposit
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              {depositsFrozen && (
+                      Deposit
+                    </Button>
+                  </div>
+                </TooltipTrigger>
                 <TooltipContent>
                   <p>Deposits are temporarily paused</p>
                 </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <Button 
+              className="flex-1 gap-2" 
+              onClick={() => navigate("/deposit")}
+            >
+              <ArrowDownLeft className="w-4 h-4" />
+              Deposit
+            </Button>
+          )}
           
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="flex-1">
-                  <Button 
-                    variant="outline" 
-                    className="w-full gap-2 border-primary/30 text-primary hover:bg-primary/10"
-                    onClick={() => navigate("/withdraw")}
-                    disabled={withdrawalsFrozen}
-                  >
-                    {withdrawalsFrozen ? (
+          {withdrawalsFrozen ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex-1">
+                    <Button 
+                      variant="outline" 
+                      className="w-full gap-2 border-primary/30 text-primary"
+                      disabled
+                    >
                       <Lock className="w-4 h-4" />
-                    ) : (
-                      <ArrowUpRight className="w-4 h-4" />
-                    )}
-                    Withdraw
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              {withdrawalsFrozen && (
+                      Withdraw
+                    </Button>
+                  </div>
+                </TooltipTrigger>
                 <TooltipContent>
                   <p>Withdrawals are temporarily paused</p>
                 </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <Button 
+              variant="outline" 
+              className="flex-1 gap-2 border-primary/30 text-primary hover:bg-primary/10"
+              onClick={() => navigate("/withdraw")}
+            >
+              <ArrowUpRight className="w-4 h-4" />
+              Withdraw
+            </Button>
+          )}
         </div>
       </div>
     </motion.div>

@@ -710,54 +710,90 @@ async function handleAdmin(
       });
     }
     case "getAllDeposits": {
-      const { data, error } = await adminClient
+      // Fetch deposits
+      const { data: deposits, error } = await adminClient
         .from("pending_deposits")
-        .select("*, profiles:user_id(full_name, email, phone)")
+        .select("*")
         .order("created_at", { ascending: false });
       if (error) return jsonError(error.message, 400);
-      return jsonSuccess({ deposits: data });
+      
+      // Get user profiles for these deposits
+      const userIds = [...new Set(deposits?.map((d: any) => d.user_id) || [])];
+      const { data: profiles } = await adminClient
+        .from("profiles")
+        .select("user_id, full_name, email, phone")
+        .in("user_id", userIds);
+      
+      // Create a lookup map
+      const profileMap: Record<string, any> = {};
+      profiles?.forEach((p: any) => { profileMap[p.user_id] = p; });
+      
+      // Enrich deposits with profile info
+      const enrichedDeposits = deposits?.map((d: any) => ({
+        ...d,
+        profiles: profileMap[d.user_id] || null,
+      }));
+      
+      return jsonSuccess({ deposits: enrichedDeposits });
     }
     case "getAllWithdrawals": {
-      const { data, error } = await adminClient
+      // Fetch withdrawals
+      const { data: withdrawals, error } = await adminClient
         .from("pending_withdrawals")
-        .select("*, profiles:user_id(full_name, email, phone)")
+        .select("*")
         .order("created_at", { ascending: false });
       if (error) return jsonError(error.message, 400);
-      return jsonSuccess({ withdrawals: data });
+      
+      // Get user profiles for these withdrawals
+      const userIds = [...new Set(withdrawals?.map((w: any) => w.user_id) || [])];
+      const { data: profiles } = await adminClient
+        .from("profiles")
+        .select("user_id, full_name, email, phone")
+        .in("user_id", userIds);
+      
+      // Create a lookup map
+      const profileMap: Record<string, any> = {};
+      profiles?.forEach((p: any) => { profileMap[p.user_id] = p; });
+      
+      // Enrich withdrawals with profile info
+      const enrichedWithdrawals = withdrawals?.map((w: any) => ({
+        ...w,
+        profiles: profileMap[w.user_id] || null,
+      }));
+      
+      return jsonSuccess({ withdrawals: enrichedWithdrawals });
     }
     case "getAllUsers": {
-      // Fetch users with all related data
+      // Fetch profiles
       const { data: profiles, error } = await adminClient
         .from("profiles")
-        .select("*, wallets(balance, total_invested, total_returns), user_roles(role), user_levels(current_level, level_title, total_xp)")
+        .select("*")
         .order("created_at", { ascending: false });
       
       if (error) return jsonError(error.message, 400);
       
-      // Get user achievement counts
       const userIds = profiles?.map((p: any) => p.user_id) || [];
       
-      const [achievementsRes, investmentsRes, depositsRes, withdrawalsRes] = await Promise.all([
-        adminClient
-          .from("user_achievements")
-          .select("user_id")
-          .in("user_id", userIds),
-        adminClient
-          .from("investments")
-          .select("user_id, amount")
-          .eq("status", "active")
-          .in("user_id", userIds),
-        adminClient
-          .from("pending_deposits")
-          .select("user_id, status")
-          .eq("status", "pending")
-          .in("user_id", userIds),
-        adminClient
-          .from("pending_withdrawals")
-          .select("user_id, status")
-          .eq("status", "pending")
-          .in("user_id", userIds),
+      // Fetch related data in parallel
+      const [walletsRes, rolesRes, levelsRes, achievementsRes, investmentsRes, depositsRes, withdrawalsRes] = await Promise.all([
+        adminClient.from("wallets").select("user_id, balance, total_invested, total_returns").in("user_id", userIds),
+        adminClient.from("user_roles").select("user_id, role").in("user_id", userIds),
+        adminClient.from("user_levels").select("user_id, current_level, level_title, total_xp").in("user_id", userIds),
+        adminClient.from("user_achievements").select("user_id").in("user_id", userIds),
+        adminClient.from("investments").select("user_id, amount").eq("status", "active").in("user_id", userIds),
+        adminClient.from("pending_deposits").select("user_id").eq("status", "pending").in("user_id", userIds),
+        adminClient.from("pending_withdrawals").select("user_id").eq("status", "pending").in("user_id", userIds),
       ]);
+      
+      // Create lookup maps
+      const walletMap: Record<string, any> = {};
+      walletsRes.data?.forEach((w: any) => { walletMap[w.user_id] = w; });
+      
+      const roleMap: Record<string, string> = {};
+      rolesRes.data?.forEach((r: any) => { roleMap[r.user_id] = r.role; });
+      
+      const levelMap: Record<string, any> = {};
+      levelsRes.data?.forEach((l: any) => { levelMap[l.user_id] = l; });
       
       // Count achievements per user
       const achievementCounts: Record<string, number> = {};
@@ -786,6 +822,9 @@ async function handleAdmin(
       // Enrich user data
       const enrichedUsers = profiles?.map((user: any) => ({
         ...user,
+        wallets: walletMap[user.user_id] ? [walletMap[user.user_id]] : [],
+        user_roles: roleMap[user.user_id] ? [{ role: roleMap[user.user_id] }] : [],
+        user_levels: levelMap[user.user_id] ? [levelMap[user.user_id]] : [],
         badges_count: achievementCounts[user.user_id] || 0,
         active_investments_count: activeInvestmentCounts[user.user_id] || 0,
         pending_deposits_count: pendingDepositCounts[user.user_id] || 0,
