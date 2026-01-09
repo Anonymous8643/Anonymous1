@@ -3,7 +3,8 @@ import { motion } from "framer-motion";
 import { 
   Users, Wallet, Phone, CheckCircle, XCircle, 
   Plus, AlertTriangle, TrendingUp, TrendingDown,
-  Search, ArrowLeft, Shield, MessageSquare, BarChart3
+  Search, ArrowLeft, Shield, MessageSquare, BarChart3,
+  Newspaper, Bell, PauseCircle, PlayCircle, Image, Upload
 } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
 import { 
   useIsAdmin, 
   usePendingDeposits, 
@@ -22,7 +24,16 @@ import {
   useAllPaymentNumbers,
   useAddPaymentNumber,
   useTogglePaymentNumber,
-  usePlatformStats
+  usePlatformStats,
+  useAllMarketNews,
+  useCreateMarketNews,
+  useToggleMarketNews,
+  useAllNotices,
+  useCreateNotice,
+  useToggleNotice,
+  usePlatformSettings,
+  useUpdatePlatformSetting,
+  useUploadImage
 } from "@/hooks/useAdmin";
 import {
   useAllEmergencyMessages,
@@ -39,6 +50,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function Admin() {
   const { data: isAdmin, isLoading: checkingAdmin } = useIsAdmin();
@@ -48,6 +66,10 @@ export default function Admin() {
   const { data: paymentNumbers } = useAllPaymentNumbers();
   const { data: stats } = usePlatformStats();
   const { data: emergencyMessages } = useAllEmergencyMessages();
+  const { data: marketNews } = useAllMarketNews();
+  const { data: notices } = useAllNotices();
+  const { data: platformSettings } = usePlatformSettings();
+  
   const approveDeposit = useApproveDeposit();
   const processWithdrawal = useProcessWithdrawal();
   const updateBalance = useUpdateUserBalance();
@@ -55,6 +77,12 @@ export default function Admin() {
   const toggleNumber = useTogglePaymentNumber();
   const createEmergency = useCreateEmergencyMessage();
   const toggleEmergency = useToggleEmergencyMessage();
+  const createNews = useCreateMarketNews();
+  const toggleNews = useToggleMarketNews();
+  const createNotice = useCreateNotice();
+  const toggleNotice = useToggleNotice();
+  const updateSetting = useUpdatePlatformSetting();
+  const uploadImage = useUploadImage();
   const { toast } = useToast();
 
   const [searchUser, setSearchUser] = useState("");
@@ -63,9 +91,26 @@ export default function Admin() {
   const [adjustAmount, setAdjustAmount] = useState("");
   const [adjustReason, setAdjustReason] = useState("");
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  
+  // Emergency message state
   const [newEmergencyTitle, setNewEmergencyTitle] = useState("");
   const [newEmergencyMessage, setNewEmergencyMessage] = useState("");
   const [newEmergencyImage, setNewEmergencyImage] = useState("");
+  
+  // Market news state
+  const [newNewsTitle, setNewNewsTitle] = useState("");
+  const [newNewsDescription, setNewNewsDescription] = useState("");
+  const [newNewsImageUrl, setNewNewsImageUrl] = useState("");
+  const [uploadingNewsImage, setUploadingNewsImage] = useState(false);
+  
+  // Notice state
+  const [newNoticeTitle, setNewNoticeTitle] = useState("");
+  const [newNoticeMessage, setNewNoticeMessage] = useState("");
+  const [newNoticeType, setNewNoticeType] = useState("info");
+
+  // Get freeze status
+  const depositsFrozen = platformSettings?.find(s => s.key === "deposits_frozen")?.value?.frozen ?? false;
+  const withdrawalsFrozen = platformSettings?.find(s => s.key === "withdrawals_frozen")?.value?.frozen ?? false;
 
   if (checkingAdmin) {
     return (
@@ -84,7 +129,6 @@ export default function Admin() {
   const pendingWithdrawals = withdrawals?.filter((w) => w.status === "pending") || [];
   const completedWithdrawals = withdrawals?.filter((w) => w.status === "completed") || [];
 
-  // Calculate percentages
   const totalDeposits = deposits?.length || 0;
   const depositApprovalRate = totalDeposits > 0 ? (approvedDeposits.length / totalDeposits) * 100 : 0;
   const totalWithdrawals = withdrawals?.length || 0;
@@ -166,6 +210,71 @@ export default function Admin() {
     }
   };
 
+  const handleCreateNews = async () => {
+    if (!newNewsTitle || !newNewsDescription) return;
+    try {
+      await createNews.mutateAsync({
+        title: newNewsTitle,
+        description: newNewsDescription,
+        imageUrl: newNewsImageUrl || undefined,
+      });
+      toast({ title: "News created", description: "Market news has been published" });
+      setNewNewsTitle("");
+      setNewNewsDescription("");
+      setNewNewsImageUrl("");
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to create news" });
+    }
+  };
+
+  const handleNewsImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setUploadingNewsImage(true);
+    try {
+      const { publicUrl } = await uploadImage.mutateAsync({ file, bucket: "market-news" });
+      setNewNewsImageUrl(publicUrl);
+      toast({ title: "Image uploaded", description: "Image ready to use" });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to upload image" });
+    } finally {
+      setUploadingNewsImage(false);
+    }
+  };
+
+  const handleCreateNotice = async () => {
+    if (!newNoticeTitle || !newNoticeMessage) return;
+    try {
+      await createNotice.mutateAsync({
+        title: newNoticeTitle,
+        message: newNoticeMessage,
+        type: newNoticeType,
+      });
+      toast({ title: "Notice created", description: "Notice has been published" });
+      setNewNoticeTitle("");
+      setNewNoticeMessage("");
+      setNewNoticeType("info");
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to create notice" });
+    }
+  };
+
+  const handleToggleFreeze = async (type: "deposits" | "withdrawals", freeze: boolean) => {
+    try {
+      await updateSetting.mutateAsync({
+        key: `${type}_frozen`,
+        value: { frozen: freeze },
+      });
+      toast({
+        title: freeze ? `${type} frozen` : `${type} unfrozen`,
+        description: freeze ? `All ${type} are now paused` : `${type} are now active`,
+      });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to update setting" });
+    }
+  };
+
   return (
     <div className="min-h-screen pb-8">
       {/* Header */}
@@ -182,6 +291,52 @@ export default function Admin() {
       </header>
 
       <main className="px-4 py-6 max-w-4xl mx-auto space-y-6">
+        {/* Freeze Controls */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-card p-4"
+        >
+          <h3 className="font-semibold mb-4 flex items-center gap-2">
+            <PauseCircle className="w-5 h-5 text-destructive" />
+            Platform Controls
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+              <div className="flex items-center gap-2">
+                <TrendingUp className={`w-4 h-4 ${depositsFrozen ? "text-destructive" : "text-profit"}`} />
+                <span className="text-sm font-medium">Deposits</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs ${depositsFrozen ? "text-destructive" : "text-profit"}`}>
+                  {depositsFrozen ? "Frozen" : "Active"}
+                </span>
+                <Switch
+                  checked={!depositsFrozen}
+                  onCheckedChange={(checked) => handleToggleFreeze("deposits", !checked)}
+                  disabled={updateSetting.isPending}
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+              <div className="flex items-center gap-2">
+                <TrendingDown className={`w-4 h-4 ${withdrawalsFrozen ? "text-destructive" : "text-profit"}`} />
+                <span className="text-sm font-medium">Withdrawals</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs ${withdrawalsFrozen ? "text-destructive" : "text-profit"}`}>
+                  {withdrawalsFrozen ? "Frozen" : "Active"}
+                </span>
+                <Switch
+                  checked={!withdrawalsFrozen}
+                  onCheckedChange={(checked) => handleToggleFreeze("withdrawals", !checked)}
+                  disabled={updateSetting.isPending}
+                />
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <motion.div
@@ -297,11 +452,13 @@ export default function Admin() {
         )}
 
         <Tabs defaultValue="deposits" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-7 text-xs">
             <TabsTrigger value="deposits">Deposits</TabsTrigger>
             <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="messages">Messages</TabsTrigger>
+            <TabsTrigger value="messages">Alerts</TabsTrigger>
+            <TabsTrigger value="news">News</TabsTrigger>
+            <TabsTrigger value="notices">Notices</TabsTrigger>
             <TabsTrigger value="numbers">Numbers</TabsTrigger>
           </TabsList>
 
@@ -315,9 +472,6 @@ export default function Admin() {
                     <p className="font-semibold">KES {Number(deposit.amount).toLocaleString()}</p>
                     <p className="text-sm text-muted-foreground">
                       {deposit.profiles?.full_name || deposit.profiles?.email || "Unknown"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      User ID: {deposit.user_id.slice(0, 8)}...
                     </p>
                     <p className="text-xs text-muted-foreground">
                       From: {deposit.phone_number} • {deposit.mpesa_code || "No code"}
@@ -358,9 +512,6 @@ export default function Admin() {
                     <p className="font-semibold">KES {Number(withdrawal.amount).toLocaleString()}</p>
                     <p className="text-sm text-muted-foreground">
                       {withdrawal.profiles?.full_name || withdrawal.profiles?.email || "Unknown"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      User ID: {withdrawal.user_id.slice(0, 8)}...
                     </p>
                     <p className="text-xs text-muted-foreground">To: {withdrawal.phone_number}</p>
                     <p className="text-xs text-muted-foreground">
@@ -406,7 +557,6 @@ export default function Admin() {
                   <p className="font-semibold">{user.full_name || "No name"}</p>
                   <p className="text-sm text-muted-foreground">{user.email}</p>
                   <p className="text-xs text-muted-foreground">{user.phone || "No phone"}</p>
-                  <p className="text-xs text-muted-foreground">ID: {user.user_id.slice(0, 8)}...</p>
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-profit">
@@ -525,6 +675,167 @@ export default function Admin() {
                     onClick={() => toggleEmergency.mutate({ id: msg.id, isActive: !msg.is_active })}
                   >
                     {msg.is_active ? "Active" : "Inactive"}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </TabsContent>
+
+          <TabsContent value="news" className="space-y-4">
+            <div className="glass-card p-4 space-y-4">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Newspaper className="w-4 h-4" />
+                Create Market News
+              </h3>
+              <div className="space-y-3">
+                <Input
+                  placeholder="News Title"
+                  value={newNewsTitle}
+                  onChange={(e) => setNewNewsTitle(e.target.value)}
+                />
+                <Textarea
+                  placeholder="News description..."
+                  value={newNewsDescription}
+                  onChange={(e) => setNewNewsDescription(e.target.value)}
+                  rows={3}
+                />
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Image URL (or upload)"
+                    value={newNewsImageUrl}
+                    onChange={(e) => setNewNewsImageUrl(e.target.value)}
+                    className="flex-1"
+                  />
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleNewsImageUpload}
+                      disabled={uploadingNewsImage}
+                    />
+                    <Button type="button" variant="outline" disabled={uploadingNewsImage} asChild>
+                      <span>
+                        {uploadingNewsImage ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+                        ) : (
+                          <Upload className="w-4 h-4" />
+                        )}
+                      </span>
+                    </Button>
+                  </label>
+                </div>
+                {newNewsImageUrl && (
+                  <img src={newNewsImageUrl} alt="Preview" className="w-full h-32 object-cover rounded-lg" />
+                )}
+                <Button 
+                  onClick={handleCreateNews} 
+                  disabled={!newNewsTitle || !newNewsDescription || createNews.isPending}
+                  className="w-full"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Publish News
+                </Button>
+              </div>
+            </div>
+
+            {marketNews?.map((news: any) => (
+              <div key={news.id} className="glass-card p-4">
+                <div className="flex items-start justify-between gap-4">
+                  {news.image_url && (
+                    <img 
+                      src={news.image_url} 
+                      alt={news.title} 
+                      className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`w-2 h-2 rounded-full ${news.is_active ? 'bg-profit' : 'bg-muted'}`} />
+                      <h4 className="font-semibold truncate">{news.title}</h4>
+                    </div>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{news.description}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatDistanceToNow(new Date(news.created_at), { addSuffix: true })}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={news.is_active ? "default" : "outline"}
+                    onClick={() => toggleNews.mutate({ id: news.id, isActive: !news.is_active })}
+                  >
+                    {news.is_active ? "Active" : "Inactive"}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </TabsContent>
+
+          <TabsContent value="notices" className="space-y-4">
+            <div className="glass-card p-4 space-y-4">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Bell className="w-4 h-4" />
+                Create Notice
+              </h3>
+              <div className="space-y-3">
+                <Input
+                  placeholder="Notice Title"
+                  value={newNoticeTitle}
+                  onChange={(e) => setNewNoticeTitle(e.target.value)}
+                />
+                <Textarea
+                  placeholder="Notice message..."
+                  value={newNoticeMessage}
+                  onChange={(e) => setNewNoticeMessage(e.target.value)}
+                  rows={3}
+                />
+                <Select value={newNoticeType} onValueChange={setNewNoticeType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="info">Info</SelectItem>
+                    <SelectItem value="important">Important</SelectItem>
+                    <SelectItem value="update">Update</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button 
+                  onClick={handleCreateNotice} 
+                  disabled={!newNoticeTitle || !newNoticeMessage || createNotice.isPending}
+                  className="w-full"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Publish Notice
+                </Button>
+              </div>
+            </div>
+
+            {notices?.map((notice: any) => (
+              <div key={notice.id} className="glass-card p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`w-2 h-2 rounded-full ${notice.is_active ? 'bg-profit' : 'bg-muted'}`} />
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        notice.type === 'important' ? 'bg-yellow-500/20 text-yellow-500' :
+                        notice.type === 'update' ? 'bg-blue-500/20 text-blue-500' :
+                        'bg-muted text-muted-foreground'
+                      }`}>
+                        {notice.type}
+                      </span>
+                      <h4 className="font-semibold">{notice.title}</h4>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{notice.message}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatDistanceToNow(new Date(notice.created_at), { addSuffix: true })}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={notice.is_active ? "default" : "outline"}
+                    onClick={() => toggleNotice.mutate({ id: notice.id, isActive: !notice.is_active })}
+                  >
+                    {notice.is_active ? "Active" : "Inactive"}
                   </Button>
                 </div>
               </div>

@@ -1020,7 +1020,7 @@ async function handleAdmin(
     case "createNotice": {
       const { title, message, type, expiresAt } = body as { 
         title: string; 
-        message: string; 
+        message: string;
         type?: string;
         expiresAt?: string;
       };
@@ -1050,20 +1050,44 @@ async function handleAdmin(
       if (error) return jsonError(error.message, 400);
       return jsonSuccess({ success: true });
     }
+    case "getPlatformSettings": {
+      const { data, error } = await adminClient
+        .from("platform_settings")
+        .select("*");
+      if (error) return jsonError(error.message, 400);
+      return jsonSuccess({ settings: data });
+    }
+    case "updatePlatformSetting": {
+      const { key, value } = body as { key: string; value: Record<string, unknown> };
+      const { error } = await adminClient
+        .from("platform_settings")
+        .update({ value, updated_by: adminId, updated_at: new Date().toISOString() })
+        .eq("key", key);
+      if (error) return jsonError(error.message, 400);
+      
+      await adminClient.from("admin_audit_log").insert({
+        admin_id: adminId,
+        action: "update_platform_setting",
+        target_table: "platform_settings",
+        details: { key, value },
+      });
+      
+      return jsonSuccess({ success: true });
+    }
     case "uploadImage": {
-      // For image uploads, we return a presigned URL
       const { bucket, fileName, contentType } = body as { 
         bucket: string; 
-        fileName: string;
+        fileName: string; 
         contentType: string;
       };
       
+      const path = `${Date.now()}-${fileName}`;
       const { data, error } = await adminClient.storage
         .from(bucket)
-        .createSignedUploadUrl(fileName);
+        .createSignedUploadUrl(path);
       
       if (error) return jsonError(error.message, 400);
-      return jsonSuccess({ signedUrl: data.signedUrl, path: data.path });
+      return jsonSuccess({ signedUrl: data.signedUrl, path });
     }
     case "getImageUrl": {
       const { bucket, path } = body as { bucket: string; path: string };

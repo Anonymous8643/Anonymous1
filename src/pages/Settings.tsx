@@ -1,15 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   User, Lock, Bell, Wallet, CreditCard, Moon, Sun, 
-  ChevronRight, Shield, LogOut, Phone, Mail, Edit2, Save, Loader2 
+  ChevronRight, Shield, LogOut, Phone, Mail, Edit2, Save, Loader2, Eye, EyeOff 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { BottomNav } from "@/components/ui/BottomNav";
 import { useAuth } from "@/hooks/useAuth";
-import { useProfile, useUpdateProfile } from "@/hooks/useProfile";
+import { useProfile, useUpdateProfile, useToggleHideBalance } from "@/hooks/useProfile";
 import { useWallet } from "@/hooks/useWallet";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +24,7 @@ export default function Settings() {
   const { data: wallet } = useWallet();
   const { data: transactions } = useTransactions();
   const updateProfile = useUpdateProfile();
+  const toggleHideBalance = useToggleHideBalance();
   const { toast } = useToast();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -31,6 +32,14 @@ export default function Settings() {
   const [phone, setPhone] = useState("");
   const [darkMode, setDarkMode] = useState(true);
   const [notifications, setNotifications] = useState(true);
+  const [hideBalance, setHideBalance] = useState(false);
+
+  // Sync hideBalance state with profile
+  useEffect(() => {
+    if (profile) {
+      setHideBalance(profile.hide_balance ?? false);
+    }
+  }, [profile]);
 
   const handleSaveProfile = async () => {
     try {
@@ -45,7 +54,22 @@ export default function Settings() {
     }
   };
 
+  const handleToggleHideBalance = async (checked: boolean) => {
+    setHideBalance(checked);
+    try {
+      await toggleHideBalance.mutateAsync(checked);
+      toast({ 
+        title: checked ? "Balance hidden" : "Balance visible",
+        description: checked ? "Your balance is now hidden" : "Your balance is now visible"
+      });
+    } catch {
+      setHideBalance(!checked); // Revert on error
+      toast({ variant: "destructive", title: "Error", description: "Failed to update preference" });
+    }
+  };
+
   const recentTransactions = transactions?.slice(0, 5) || [];
+  const displayBalance = hideBalance ? "••••••" : `KES ${Number(wallet?.balance || 0).toLocaleString()}`;
 
   return (
     <div className="min-h-screen pb-24">
@@ -177,9 +201,24 @@ export default function Settings() {
                 <p className="font-medium">Balance</p>
                 <p className="text-sm text-muted-foreground">Available funds</p>
               </div>
-              <p className="text-xl font-bold text-profit">
-                KES {Number(wallet?.balance || 0).toLocaleString()}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className={`text-xl font-bold ${hideBalance ? 'text-muted-foreground' : 'text-profit'}`}>
+                  {displayBalance}
+                </p>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => handleToggleHideBalance(!hideBalance)}
+                  disabled={toggleHideBalance.isPending}
+                >
+                  {hideBalance ? (
+                    <EyeOff className="w-4 h-4 text-muted-foreground" />
+                  ) : (
+                    <Eye className="w-4 h-4 text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
             </div>
 
             <Button variant="outline" className="w-full justify-between">
@@ -212,7 +251,7 @@ export default function Settings() {
                       : "text-foreground"
                     }>
                       {tx.type === "deposit" || tx.type === "return" || tx.type === "referral_bonus" ? "+" : "-"}
-                      KES {Number(tx.amount).toLocaleString()}
+                      KES {hideBalance ? "••••" : Number(tx.amount).toLocaleString()}
                     </span>
                   </div>
                 ))
@@ -236,6 +275,21 @@ export default function Settings() {
           </h3>
 
           <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {hideBalance ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                <div>
+                  <p className="font-medium">Hide Balance</p>
+                  <p className="text-sm text-muted-foreground">Blur your balance for privacy</p>
+                </div>
+              </div>
+              <Switch
+                checked={hideBalance}
+                onCheckedChange={handleToggleHideBalance}
+                disabled={toggleHideBalance.isPending}
+              />
+            </div>
+
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {darkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}

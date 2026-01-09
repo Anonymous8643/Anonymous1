@@ -168,7 +168,19 @@ class ApiClient {
       this.request<{ signedUrl: string; path: string }>("admin", "uploadImage", { bucket, fileName, contentType }),
     getImageUrl: (bucket: string, path: string) =>
       this.request<{ publicUrl: string }>("admin", "getImageUrl", { bucket, path }),
+    getPlatformSettings: () => 
+      this.request<{ settings: PlatformSetting[] }>("admin", "getPlatformSettings", {}),
+    updatePlatformSetting: (key: string, value: Record<string, unknown>) =>
+      this.request<{ success: boolean }>("admin", "updatePlatformSetting", { key, value }),
   };
+}
+
+export interface PlatformSetting {
+  id: string;
+  key: string;
+  value: { frozen?: boolean };
+  updated_at: string;
+  updated_by: string | null;
 }
 
 // Types
