@@ -196,6 +196,10 @@ class ApiClient {
       this.request<{ activities: SuspiciousActivity[] }>("admin", "getSuspiciousActivities", {}),
     resolveSuspiciousActivity: (id: string) =>
       this.request<{ success: boolean }>("admin", "resolveSuspiciousActivity", { id }),
+    getAllProducts: () =>
+      this.request<{ products: Product[] }>("admin", "getAllProducts", {}),
+    toggleProduct: (id: string, isActive: boolean) =>
+      this.request<{ success: boolean }>("admin", "toggleProduct", { id, isActive }),
   };
 }
 

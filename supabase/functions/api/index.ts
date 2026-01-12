@@ -10,9 +10,102 @@ const corsHeaders = {
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+const resendApiKey = Deno.env.get("RESEND_API_KEY");
+const adminEmail = Deno.env.get("ADMIN_EMAIL");
 
 // Create admin client for privileged operations
 const adminClient = createClient(supabaseUrl, supabaseServiceKey);
+
+// Rate limiting store (in-memory, resets on function restart)
+const rateLimitStore: Map<string, { count: number; resetTime: number }> = new Map();
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
+const MAX_LOGIN_ATTEMPTS = 5;
+
+// Check rate limit for login
+function checkRateLimit(ip: string): { allowed: boolean; remainingAttempts: number; resetIn: number } {
+  const now = Date.now();
+  const record = rateLimitStore.get(ip);
+  
+  if (!record || now > record.resetTime) {
+    rateLimitStore.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return { allowed: true, remainingAttempts: MAX_LOGIN_ATTEMPTS - 1, resetIn: RATE_LIMIT_WINDOW };
+  }
+  
+  if (record.count >= MAX_LOGIN_ATTEMPTS) {
+    return { allowed: false, remainingAttempts: 0, resetIn: record.resetTime - now };
+  }
+  
+  record.count++;
+  return { allowed: true, remainingAttempts: MAX_LOGIN_ATTEMPTS - record.count, resetIn: record.resetTime - now };
+}
+
+// Reset rate limit on successful login
+function resetRateLimit(ip: string): void {
+  rateLimitStore.delete(ip);
+}
+
+// Send email notification for suspicious activity
+async function sendSuspiciousActivityEmail(
+  action: string,
+  severity: string,
+  details: Record<string, unknown>,
+  clientInfo: { ipAddress: string; browser: string; device: string }
+) {
+  if (!resendApiKey || !adminEmail) {
+    console.log("Email notification skipped: RESEND_API_KEY or ADMIN_EMAIL not configured");
+    return;
+  }
+  
+  // Only send for high/critical severity
+  if (severity !== "high" && severity !== "critical") return;
+  
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "InvesterMate Security <onboarding@resend.dev>",
+        to: [adminEmail],
+        subject: `🚨 ${severity.toUpperCase()} Security Alert: ${action}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: ${severity === 'critical' ? '#dc2626' : '#f59e0b'};">
+              Security Alert: ${action}
+            </h2>
+            <p><strong>Severity:</strong> ${severity.toUpperCase()}</p>
+            <p><strong>Time:</strong> ${new Date().toISOString()}</p>
+            <hr style="border: 1px solid #e5e7eb;" />
+            <h3>Client Information</h3>
+            <ul>
+              <li><strong>IP Address:</strong> ${clientInfo.ipAddress}</li>
+              <li><strong>Browser:</strong> ${clientInfo.browser}</li>
+              <li><strong>Device:</strong> ${clientInfo.device}</li>
+            </ul>
+            <h3>Details</h3>
+            <pre style="background: #f3f4f6; padding: 15px; border-radius: 5px; overflow: auto;">
+${JSON.stringify(details, null, 2)}
+            </pre>
+            <hr style="border: 1px solid #e5e7eb;" />
+            <p style="color: #6b7280; font-size: 12px;">
+              This is an automated security alert from InvesterMate.
+            </p>
+          </div>
+        `,
+      }),
+    });
+    
+    if (response.ok) {
+      console.log(`Security email sent to ${adminEmail}`);
+    } else {
+      console.error("Failed to send security email:", await response.text());
+    }
+  } catch (error) {
+    console.error("Failed to send security email:", error);
+  }
+}
 
 // Helper to create user client from auth header
 function createUserClient(authHeader: string | null) {
@@ -64,6 +157,9 @@ async function logSuspiciousActivity(
       device: clientInfo.device,
     });
     console.log(`Suspicious activity logged: ${action} (${severity})`);
+    
+    // Send email notification for high/critical severity
+    await sendSuspiciousActivityEmail(action, severity, details, clientInfo);
   } catch (error) {
     console.error("Failed to log suspicious activity:", error);
   }
@@ -100,7 +196,8 @@ async function isAdmin(userId: string): Promise<boolean> {
 async function handleAuth(
   req: Request,
   action: string,
-  body: Record<string, unknown>
+  body: Record<string, unknown>,
+  clientInfo: { ipAddress: string; userAgent: string; browser: string; device: string }
 ): Promise<Response> {
   const publicClient = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -119,8 +216,30 @@ async function handleAuth(
     }
     case "signIn": {
       const { email, password } = body as { email: string; password: string };
+      
+      // Check rate limit
+      const rateLimit = checkRateLimit(clientInfo.ipAddress);
+      if (!rateLimit.allowed) {
+        const minutesRemaining = Math.ceil(rateLimit.resetIn / 60000);
+        await logSuspiciousActivity(
+          null, 
+          "rate_limit_exceeded", 
+          "high", 
+          { email, attempts: MAX_LOGIN_ATTEMPTS, reset_in_minutes: minutesRemaining },
+          clientInfo
+        );
+        return jsonError(`Too many login attempts. Please try again in ${minutesRemaining} minutes.`, 429);
+      }
+      
       const { data, error } = await publicClient.auth.signInWithPassword({ email, password });
-      if (error) return jsonError(error.message, 400);
+      if (error) {
+        // Log failed attempt
+        await logSuspiciousActivity(null, "failed_login_attempt", "medium", { email, remaining_attempts: rateLimit.remainingAttempts }, clientInfo);
+        return jsonError(error.message, 400);
+      }
+      
+      // Reset rate limit on successful login
+      resetRateLimit(clientInfo.ipAddress);
       return jsonSuccess({ user: data.user, session: data.session });
     }
     case "signOut": {
@@ -433,6 +552,76 @@ async function handleInvestments(
         description: `Investment purchase`,
         status: "completed",
       });
+      
+      // Update weekly challenge progress for investment-type challenges
+      try {
+        const now = new Date().toISOString();
+        const { data: userChallenges } = await adminClient
+          .from("user_challenges")
+          .select("*, weekly_challenges(*)")
+          .eq("user_id", userId)
+          .eq("completed", false);
+        
+        if (userChallenges && userChallenges.length > 0) {
+          for (const uc of userChallenges) {
+            const challenge = uc.weekly_challenges;
+            if (!challenge || challenge.ends_at < now) continue;
+            
+            // Check if challenge type matches investment-based challenges
+            let progressIncrease = 0;
+            if (challenge.challenge_type === "invest_amount") {
+              progressIncrease = amount;
+            } else if (challenge.challenge_type === "invest_count") {
+              progressIncrease = 1;
+            }
+            
+            if (progressIncrease > 0) {
+              const newProgress = uc.current_progress + progressIncrease;
+              const isCompleted = newProgress >= challenge.target_value;
+              
+              await adminClient
+                .from("user_challenges")
+                .update({
+                  current_progress: newProgress,
+                  completed: isCompleted,
+                  completed_at: isCompleted ? now : null,
+                })
+                .eq("id", uc.id);
+              
+              // If completed, add reward to wallet
+              if (isCompleted && !uc.reward_claimed) {
+                const { data: currentWallet } = await adminClient
+                  .from("wallets")
+                  .select("balance")
+                  .eq("user_id", userId)
+                  .single();
+                
+                if (currentWallet && challenge.reward_amount > 0) {
+                  await adminClient
+                    .from("wallets")
+                    .update({ balance: Number(currentWallet.balance) + challenge.reward_amount })
+                    .eq("user_id", userId);
+                  
+                  await adminClient.from("transactions").insert({
+                    user_id: userId,
+                    type: "challenge_reward",
+                    amount: challenge.reward_amount,
+                    description: `Challenge completed: ${challenge.title}`,
+                    status: "completed",
+                  });
+                  
+                  await adminClient
+                    .from("user_challenges")
+                    .update({ reward_claimed: true })
+                    .eq("id", uc.id);
+                }
+              }
+            }
+          }
+        }
+      } catch (challengeError) {
+        console.error("Failed to update challenge progress:", challengeError);
+      }
       
       return jsonSuccess({ investment: data });
     }
@@ -1614,6 +1803,31 @@ async function handleAdmin(
       if (error) return jsonError(error.message, 400);
       return jsonSuccess({ success: true });
     }
+    case "getAllProducts": {
+      const { data, error } = await adminClient
+        .from("products")
+        .select("*")
+        .order("price", { ascending: true });
+      if (error) return jsonError(error.message, 400);
+      return jsonSuccess({ products: data });
+    }
+    case "toggleProduct": {
+      const { id, isActive } = body as { id: string; isActive: boolean };
+      const { error } = await adminClient
+        .from("products")
+        .update({ is_active: isActive })
+        .eq("id", id);
+      if (error) return jsonError(error.message, 400);
+      
+      await adminClient.from("admin_audit_log").insert({
+        admin_id: adminId,
+        action: isActive ? "activate_product" : "deactivate_product",
+        target_table: "products",
+        target_id: id,
+      });
+      
+      return jsonSuccess({ success: true });
+    }
     default:
       return jsonError("Invalid admin action", 400);
   }
@@ -1655,12 +1869,8 @@ serve(async (req) => {
     
     // Public routes (no auth required)
     if (resource === "auth") {
-      // Log failed auth attempts
-      const result = await handleAuth(req, action, body);
-      if (result.status === 400 && action === "signIn") {
-        await logSuspiciousActivity(null, "failed_login_attempt", "medium", { email: body.email }, clientInfo);
-      }
-      return result;
+      // Rate limiting and suspicious activity logging is handled inside handleAuth for signIn
+      return await handleAuth(req, action, body, clientInfo);
     }
     
     if (resource === "public") {

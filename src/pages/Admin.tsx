@@ -6,7 +6,8 @@ import {
   Search, ArrowLeft, Shield, MessageSquare, BarChart3,
   Newspaper, Bell, PauseCircle, PlayCircle, Image, Upload,
   Trash2, Award, ChevronLeft, ChevronRight, Timer, Megaphone,
-  MessageCircle, RefreshCw, Eye, AlertOctagon, Globe, Monitor
+  MessageCircle, RefreshCw, Eye, AlertOctagon, Globe, Monitor,
+  Package
 } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,8 @@ import {
   useResetAllData,
   useSuspiciousActivities,
   useResolveSuspiciousActivity,
+  useAllProducts,
+  useToggleProduct,
 } from "@/hooks/useAdmin";
 import {
   useAllEmergencyMessages,
@@ -81,7 +84,7 @@ export default function Admin() {
   const { data: notices } = useAllNotices();
   const { data: platformSettings } = usePlatformSettings();
   const { data: suspiciousActivities } = useSuspiciousActivities();
-  
+  const { data: allProducts } = useAllProducts();
   const approveDeposit = useApproveDeposit();
   const processWithdrawal = useProcessWithdrawal();
   const updateBalance = useUpdateUserBalance();
@@ -102,6 +105,7 @@ export default function Admin() {
   const deleteEmergency = useDeleteEmergencyMessage();
   const resetAllData = useResetAllData();
   const resolveActivity = useResolveSuspiciousActivity();
+  const toggleProduct = useToggleProduct();
   const { toast } = useToast();
 
   const [searchUser, setSearchUser] = useState("");
@@ -779,10 +783,11 @@ export default function Admin() {
         )}
 
         <Tabs defaultValue="deposits" className="w-full">
-          <TabsList className="grid w-full grid-cols-8 text-xs">
+          <TabsList className="grid w-full grid-cols-9 text-xs">
             <TabsTrigger value="deposits">Deposits</TabsTrigger>
             <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="products">Products</TabsTrigger>
             <TabsTrigger value="messages">Alerts</TabsTrigger>
             <TabsTrigger value="news">News</TabsTrigger>
             <TabsTrigger value="notices">Notices</TabsTrigger>
@@ -1321,6 +1326,63 @@ export default function Admin() {
                 </div>
               </div>
             ))}
+          </TabsContent>
+
+          <TabsContent value="products" className="space-y-4">
+            <div className="glass-card p-4">
+              <h3 className="font-semibold flex items-center gap-2 mb-4">
+                <Package className="w-5 h-5 text-primary" />
+                Product Management
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Toggle products on/off to control which investments are available to users.
+              </p>
+            </div>
+
+            {allProducts?.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">No products found</p>
+            ) : (
+              allProducts?.map((product: any) => (
+                <div key={product.id} className={`glass-card p-4 ${!product.is_active ? 'opacity-60' : ''}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`w-2 h-2 rounded-full ${product.is_active ? 'bg-profit' : 'bg-muted'}`} />
+                        <h4 className="font-semibold">{product.name}</h4>
+                        {product.is_popular && (
+                          <Badge variant="secondary">Popular</Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span>KES {Number(product.price).toLocaleString()}</span>
+                        <span>{product.expected_return}% return</span>
+                        <span>{product.duration_days} days</span>
+                        <span className="text-xs">{product.category}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs ${product.is_active ? 'text-profit' : 'text-muted-foreground'}`}>
+                        {product.is_active ? 'Live' : 'Closed'}
+                      </span>
+                      <Switch
+                        checked={product.is_active}
+                        onCheckedChange={(checked) => {
+                          toggleProduct.mutate({ id: product.id, isActive: checked }, {
+                            onSuccess: () => {
+                              toast({
+                                title: checked ? "Product activated" : "Product deactivated",
+                                description: checked ? "Product is now available for investment" : "Product is no longer available",
+                              });
+                            },
+                          });
+                        }}
+                        disabled={toggleProduct.isPending}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </TabsContent>
 
           <TabsContent value="security" className="space-y-4">

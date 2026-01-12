@@ -222,12 +222,13 @@ export const useJoinChallenge = () => {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (_challengeId: string) => {
-      // This would need a dedicated API endpoint
-      throw new Error("Join challenge not implemented via API yet");
+    mutationFn: async (challengeId: string) => {
+      const { challenge } = await api.gamification.joinChallenge(challengeId);
+      return challenge;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user-challenges", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["weekly-challenges"] });
     },
   });
 };

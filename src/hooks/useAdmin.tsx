@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, AdminDeposit, AdminWithdrawal, AdminUser, PaymentNumber, EmergencyMessage, MarketNews, Notice, PlatformStats, SuspiciousActivity } from "@/lib/api";
+import { api, AdminDeposit, AdminWithdrawal, AdminUser, PaymentNumber, EmergencyMessage, MarketNews, Notice, PlatformStats, SuspiciousActivity, Product } from "@/lib/api";
 import { useAuth } from "./useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -457,6 +457,35 @@ export const useResolveSuspiciousActivity = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["suspicious_activities_admin"] });
+    },
+  });
+};
+
+// Admin Products hooks
+export const useAllProducts = () => {
+  const { data: isAdmin } = useIsAdmin();
+
+  return useQuery({
+    queryKey: ["all_products_admin"],
+    queryFn: async () => {
+      const { products } = await api.admin.getAllProducts();
+      return products;
+    },
+    enabled: isAdmin,
+  });
+};
+
+export const useToggleProduct = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      await api.admin.toggleProduct(id, isActive);
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all_products_admin"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
     },
   });
 };
