@@ -164,16 +164,24 @@ class ApiClient {
       this.request<{ success: boolean }>("admin", "createEmergencyMessage", { title, message, imageUrl, expiresAt }),
     toggleEmergencyMessage: (id: string, isActive: boolean) =>
       this.request<{ success: boolean }>("admin", "toggleEmergencyMessage", { id, isActive }),
+    deleteEmergencyMessage: (id: string) =>
+      this.request<{ success: boolean }>("admin", "deleteEmergencyMessage", { id }),
     getMarketNews: () => this.request<{ news: MarketNews[] }>("admin", "getMarketNews", {}),
     createMarketNews: (title: string, description: string, imageUrl?: string) =>
       this.request<{ success: boolean }>("admin", "createMarketNews", { title, description, imageUrl }),
     toggleMarketNews: (id: string, isActive: boolean) =>
       this.request<{ success: boolean }>("admin", "toggleMarketNews", { id, isActive }),
+    deleteMarketNews: (id: string) =>
+      this.request<{ success: boolean }>("admin", "deleteMarketNews", { id }),
     getNotices: () => this.request<{ notices: Notice[] }>("admin", "getNotices", {}),
     createNotice: (title: string, message: string, type?: string, expiresAt?: string) =>
       this.request<{ success: boolean }>("admin", "createNotice", { title, message, type, expiresAt }),
     toggleNotice: (id: string, isActive: boolean) =>
       this.request<{ success: boolean }>("admin", "toggleNotice", { id, isActive }),
+    deleteNotice: (id: string) =>
+      this.request<{ success: boolean }>("admin", "deleteNotice", { id }),
+    deleteUser: (userId: string) =>
+      this.request<{ success: boolean }>("admin", "deleteUser", { userId }),
     uploadImage: (bucket: string, fileName: string, contentType: string) =>
       this.request<{ signedUrl: string; path: string }>("admin", "uploadImage", { bucket, fileName, contentType }),
     getImageUrl: (bucket: string, path: string) =>

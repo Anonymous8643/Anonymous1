@@ -1188,6 +1188,24 @@ async function handleAdmin(
       
       return jsonSuccess({ success: true });
     }
+    case "deleteUser": {
+      const { userId } = body as { userId: string };
+      
+      // Delete user from auth (this cascades to profiles, wallets, etc. due to foreign keys)
+      const { error } = await adminClient.auth.admin.deleteUser(userId);
+      
+      if (error) return jsonError(error.message, 400);
+      
+      await adminClient.from("admin_audit_log").insert({
+        admin_id: adminId,
+        action: "delete_user",
+        target_table: "auth.users",
+        target_id: userId,
+        details: { reason: "Terms violation" },
+      });
+      
+      return jsonSuccess({ success: true });
+    }
     case "updateUserBalance": {
       const { userId, amount, reason } = body as { userId: string; amount: number; reason: string };
       
@@ -1324,6 +1342,23 @@ async function handleAdmin(
       if (error) return jsonError(error.message, 400);
       return jsonSuccess({ success: true });
     }
+    case "deleteEmergencyMessage": {
+      const { id } = body as { id: string };
+      const { error } = await adminClient
+        .from("emergency_messages")
+        .delete()
+        .eq("id", id);
+      if (error) return jsonError(error.message, 400);
+      
+      await adminClient.from("admin_audit_log").insert({
+        admin_id: adminId,
+        action: "delete_emergency_message",
+        target_table: "emergency_messages",
+        target_id: id,
+      });
+      
+      return jsonSuccess({ success: true });
+    }
     case "getMarketNews": {
       const { data, error } = await adminClient
         .from("market_news")
@@ -1362,6 +1397,23 @@ async function handleAdmin(
         .update({ is_active: isActive })
         .eq("id", id);
       if (error) return jsonError(error.message, 400);
+      return jsonSuccess({ success: true });
+    }
+    case "deleteMarketNews": {
+      const { id } = body as { id: string };
+      const { error } = await adminClient
+        .from("market_news")
+        .delete()
+        .eq("id", id);
+      if (error) return jsonError(error.message, 400);
+      
+      await adminClient.from("admin_audit_log").insert({
+        admin_id: adminId,
+        action: "delete_market_news",
+        target_table: "market_news",
+        target_id: id,
+      });
+      
       return jsonSuccess({ success: true });
     }
     case "getNotices": {
@@ -1403,6 +1455,23 @@ async function handleAdmin(
         .update({ is_active: isActive })
         .eq("id", id);
       if (error) return jsonError(error.message, 400);
+      return jsonSuccess({ success: true });
+    }
+    case "deleteNotice": {
+      const { id } = body as { id: string };
+      const { error } = await adminClient
+        .from("notices")
+        .delete()
+        .eq("id", id);
+      if (error) return jsonError(error.message, 400);
+      
+      await adminClient.from("admin_audit_log").insert({
+        admin_id: adminId,
+        action: "delete_notice",
+        target_table: "notices",
+        target_id: id,
+      });
+      
       return jsonSuccess({ success: true });
     }
     case "getPlatformSettings": {

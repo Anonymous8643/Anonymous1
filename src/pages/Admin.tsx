@@ -31,9 +31,12 @@ import {
   useAllMarketNews,
   useCreateMarketNews,
   useToggleMarketNews,
+  useDeleteMarketNews,
   useAllNotices,
   useCreateNotice,
   useToggleNotice,
+  useDeleteNotice,
+  useDeleteUser,
   usePlatformSettings,
   useUpdatePlatformSetting,
   useUploadImage
@@ -42,6 +45,7 @@ import {
   useAllEmergencyMessages,
   useCreateEmergencyMessage,
   useToggleEmergencyMessage,
+  useDeleteEmergencyMessage,
 } from "@/hooks/useEmergencyMessages";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
@@ -83,10 +87,14 @@ export default function Admin() {
   const toggleEmergency = useToggleEmergencyMessage();
   const createNews = useCreateMarketNews();
   const toggleNews = useToggleMarketNews();
+  const deleteNews = useDeleteMarketNews();
   const createNotice = useCreateNotice();
   const toggleNotice = useToggleNotice();
+  const deleteNotice = useDeleteNotice();
+  const deleteUser = useDeleteUser();
   const updateSetting = useUpdatePlatformSetting();
   const uploadImage = useUploadImage();
+  const deleteEmergency = useDeleteEmergencyMessage();
   const { toast } = useToast();
 
   const [searchUser, setSearchUser] = useState("");
@@ -326,6 +334,42 @@ export default function Admin() {
       toast({ title: "Number deleted", description: "Payment number has been removed" });
     } catch (error) {
       toast({ variant: "destructive", title: "Error", description: "Failed to delete number" });
+    }
+  };
+
+  const handleDeleteEmergency = async (id: string) => {
+    try {
+      await deleteEmergency.mutateAsync({ id });
+      toast({ title: "Alert deleted", description: "Emergency message has been removed" });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to delete alert" });
+    }
+  };
+
+  const handleDeleteNews = async (id: string) => {
+    try {
+      await deleteNews.mutateAsync({ id });
+      toast({ title: "News deleted", description: "Market news has been removed" });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to delete news" });
+    }
+  };
+
+  const handleDeleteNotice = async (id: string) => {
+    try {
+      await deleteNotice.mutateAsync({ id });
+      toast({ title: "Notice deleted", description: "Notice has been removed" });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to delete notice" });
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      await deleteUser.mutateAsync({ userId });
+      toast({ title: "User deleted", description: "User account has been permanently removed" });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to delete user" });
     }
   };
 
@@ -836,6 +880,19 @@ export default function Admin() {
                           >
                             Apply Adjustment
                           </Button>
+                          <Button
+                            variant="destructive"
+                            className="w-full mt-2"
+                            onClick={() => {
+                              if (confirm(`Are you sure you want to delete ${user.full_name || user.email}? This action cannot be undone.`)) {
+                                handleDeleteUser(user.user_id);
+                              }
+                            }}
+                            disabled={deleteUser.isPending}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete User
+                          </Button>
                         </div>
                       </DialogContent>
                     </Dialog>
@@ -926,13 +983,24 @@ export default function Admin() {
                       {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
                     </p>
                   </div>
-                  <Button
-                    size="sm"
-                    variant={msg.is_active ? "default" : "outline"}
-                    onClick={() => toggleEmergency.mutate({ id: msg.id, isActive: !msg.is_active })}
-                  >
-                    {msg.is_active ? "Active" : "Inactive"}
-                  </Button>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      size="sm"
+                      variant={msg.is_active ? "default" : "outline"}
+                      onClick={() => toggleEmergency.mutate({ id: msg.id, isActive: !msg.is_active })}
+                    >
+                      {msg.is_active ? "Active" : "Inactive"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-destructive text-destructive"
+                      onClick={() => handleDeleteEmergency(msg.id)}
+                      disabled={deleteEmergency.isPending}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -1016,13 +1084,24 @@ export default function Admin() {
                       {formatDistanceToNow(new Date(news.created_at), { addSuffix: true })}
                     </p>
                   </div>
-                  <Button
-                    size="sm"
-                    variant={news.is_active ? "default" : "outline"}
-                    onClick={() => toggleNews.mutate({ id: news.id, isActive: !news.is_active })}
-                  >
-                    {news.is_active ? "Active" : "Inactive"}
-                  </Button>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      size="sm"
+                      variant={news.is_active ? "default" : "outline"}
+                      onClick={() => toggleNews.mutate({ id: news.id, isActive: !news.is_active })}
+                    >
+                      {news.is_active ? "Active" : "Inactive"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-destructive text-destructive"
+                      onClick={() => handleDeleteNews(news.id)}
+                      disabled={deleteNews.isPending}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -1087,13 +1166,24 @@ export default function Admin() {
                       {formatDistanceToNow(new Date(notice.created_at), { addSuffix: true })}
                     </p>
                   </div>
-                  <Button
-                    size="sm"
-                    variant={notice.is_active ? "default" : "outline"}
-                    onClick={() => toggleNotice.mutate({ id: notice.id, isActive: !notice.is_active })}
-                  >
-                    {notice.is_active ? "Active" : "Inactive"}
-                  </Button>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      size="sm"
+                      variant={notice.is_active ? "default" : "outline"}
+                      onClick={() => toggleNotice.mutate({ id: notice.id, isActive: !notice.is_active })}
+                    >
+                      {notice.is_active ? "Active" : "Inactive"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-destructive text-destructive"
+                      onClick={() => handleDeleteNotice(notice.id)}
+                      disabled={deleteNotice.isPending}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}

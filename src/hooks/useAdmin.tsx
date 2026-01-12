@@ -243,6 +243,20 @@ export const useToggleMarketNews = () => {
   });
 };
 
+export const useDeleteMarketNews = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      await api.admin.deleteMarketNews(id);
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all_market_news"] });
+    },
+  });
+};
+
 // Notices hooks
 export const useAllNotices = () => {
   const { data: isAdmin } = useIsAdmin();
@@ -281,6 +295,34 @@ export const useToggleNotice = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all_notices"] });
+    },
+  });
+};
+
+export const useDeleteNotice = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      await api.admin.deleteNotice(id);
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all_notices"] });
+    },
+  });
+};
+
+export const useDeleteUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ userId }: { userId: string }) => {
+      await api.admin.deleteUser(userId);
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all_users_admin"] });
     },
   });
 };

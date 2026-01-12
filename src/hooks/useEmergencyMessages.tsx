@@ -60,3 +60,18 @@ export const useToggleEmergencyMessage = () => {
     },
   });
 };
+
+export const useDeleteEmergencyMessage = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      await api.admin.deleteEmergencyMessage(id);
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["emergency_messages"] });
+      queryClient.invalidateQueries({ queryKey: ["all_emergency_messages"] });
+    },
+  });
+};
