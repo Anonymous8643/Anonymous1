@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Phone, Copy, CheckCircle, AlertCircle, Clock, Loader2, MessageCircle, Lock } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -28,6 +28,13 @@ export default function Deposit() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { depositsFrozen } = useFreezeStatus();
+  
+  // Auto-fill phone from profile
+  useEffect(() => {
+    if (profile?.phone && !phoneNumber) {
+      setPhoneNumber(profile.phone);
+    }
+  }, [profile?.phone]);
 
   const handleCopy = () => {
     if (paymentNumber) {

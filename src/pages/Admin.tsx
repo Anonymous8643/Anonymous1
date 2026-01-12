@@ -5,7 +5,7 @@ import {
   Plus, AlertTriangle, TrendingUp, TrendingDown,
   Search, ArrowLeft, Shield, MessageSquare, BarChart3,
   Newspaper, Bell, PauseCircle, PlayCircle, Image, Upload,
-  Trash2, Award, ChevronLeft, ChevronRight, Timer
+  Trash2, Award, ChevronLeft, ChevronRight, Timer, Megaphone
 } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -120,6 +120,11 @@ export default function Admin() {
   // Maintenance message state
   const [maintenanceMessage, setMaintenanceMessage] = useState("");
   const [maintenanceEndTime, setMaintenanceEndTime] = useState("");
+  
+  // Overlay message state
+  const [overlayMessage, setOverlayMessage] = useState("");
+  const [overlayEndTime, setOverlayEndTime] = useState("");
+  const [overlayActive, setOverlayActive] = useState(false);
 
   // Get freeze status
   const depositsFrozen = platformSettings?.find(s => s.key === "deposits_frozen")?.value?.frozen ?? false;
@@ -462,6 +467,68 @@ export default function Admin() {
                     key: "community_link",
                     value: { url: null, name: null },
                   });
+                }}
+                disabled={updateSetting.isPending}
+              >
+                Clear
+              </Button>
+            </div>
+          </div>
+          
+          {/* Overlay Message (Full Screen Message) */}
+          <div className="mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 space-y-3">
+            <div className="flex items-center gap-2">
+              <Megaphone className="w-4 h-4 text-destructive" />
+              <span className="text-sm font-medium text-destructive">Full-Screen Overlay Message</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              This message will overlay the entire app with a countdown timer
+            </p>
+            <Input
+              placeholder="Important message to display..."
+              value={overlayMessage}
+              onChange={(e) => setOverlayMessage(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <Input
+                type="datetime-local"
+                value={overlayEndTime}
+                onChange={(e) => setOverlayEndTime(e.target.value)}
+                className="flex-1"
+              />
+              <Button 
+                variant={overlayActive ? "destructive" : "default"}
+                onClick={() => {
+                  const newActive = !overlayActive;
+                  setOverlayActive(newActive);
+                  updateSetting.mutate({
+                    key: "overlay_message",
+                    value: { 
+                      message: overlayMessage || null, 
+                      end_time: overlayEndTime || null,
+                      is_active: newActive
+                    },
+                  });
+                  toast({ 
+                    title: newActive ? "Overlay activated" : "Overlay deactivated",
+                    description: newActive ? "Users will see the overlay message" : "Overlay has been hidden"
+                  });
+                }}
+                disabled={updateSetting.isPending}
+              >
+                {overlayActive ? "Deactivate" : "Activate"}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setOverlayMessage("");
+                  setOverlayEndTime("");
+                  setOverlayActive(false);
+                  updateSetting.mutate({
+                    key: "overlay_message",
+                    value: { message: null, end_time: null, is_active: false },
+                  });
+                  toast({ title: "Overlay cleared" });
                 }}
                 disabled={updateSetting.isPending}
               >

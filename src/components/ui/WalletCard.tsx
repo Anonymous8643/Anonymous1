@@ -1,10 +1,10 @@
 import { motion } from "framer-motion";
 import { ArrowDownLeft, ArrowUpRight, Eye, EyeOff, Wallet, Lock } from "lucide-react";
-import { useState } from "react";
 import { Button } from "./button";
 import { useNavigate } from "react-router-dom";
 import { useFreezeStatus } from "@/components/FreezeStatusBanner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
+import { useProfile, useToggleHideBalance } from "@/hooks/useProfile";
 
 interface WalletCardProps {
   balance: number;
@@ -12,9 +12,16 @@ interface WalletCardProps {
 }
 
 export const WalletCard = ({ balance, pendingReturns }: WalletCardProps) => {
-  const [isVisible, setIsVisible] = useState(true);
   const navigate = useNavigate();
   const { depositsFrozen, withdrawalsFrozen } = useFreezeStatus();
+  const { data: profile } = useProfile();
+  const toggleHideBalance = useToggleHideBalance();
+  
+  const isVisible = !(profile?.hide_balance ?? false);
+  
+  const handleToggleVisibility = () => {
+    toggleHideBalance.mutate(!isVisible);
+  };
 
   return (
     <motion.div
@@ -40,8 +47,9 @@ export const WalletCard = ({ balance, pendingReturns }: WalletCardProps) => {
             <span className="font-medium text-muted-foreground">Wallet Balance</span>
           </div>
           <button
-            onClick={() => setIsVisible(!isVisible)}
+            onClick={handleToggleVisibility}
             className="p-2 rounded-lg hover:bg-muted/30 transition-colors"
+            disabled={toggleHideBalance.isPending}
           >
             {isVisible ? (
               <Eye className="w-5 h-5 text-muted-foreground" />

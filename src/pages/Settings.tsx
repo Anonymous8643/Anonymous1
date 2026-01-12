@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import logo from "@/assets/logo.png";
 import { Link } from "react-router-dom";
+import { useTheme } from "next-themes";
 
 export default function Settings() {
   const { user, signOut } = useAuth();
@@ -26,13 +27,15 @@ export default function Settings() {
   const updateProfile = useUpdateProfile();
   const toggleHideBalance = useToggleHideBalance();
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
 
   const [isEditing, setIsEditing] = useState(false);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
-  const [darkMode, setDarkMode] = useState(true);
   const [notifications, setNotifications] = useState(true);
   const [hideBalance, setHideBalance] = useState(false);
+  
+  const darkMode = theme === "dark";
 
   // Sync hideBalance state with profile
   useEffect(() => {
@@ -300,7 +303,7 @@ export default function Settings() {
               </div>
               <Switch
                 checked={darkMode}
-                onCheckedChange={setDarkMode}
+                onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
               />
             </div>
 

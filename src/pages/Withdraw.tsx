@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Phone, CheckCircle, AlertCircle, Clock, Loader2, Wallet, Lock } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -25,6 +25,13 @@ export default function Withdraw() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { withdrawalsFrozen } = useFreezeStatus();
+  
+  // Auto-fill phone from profile
+  useEffect(() => {
+    if (profile?.phone && !phoneNumber) {
+      setPhoneNumber(profile.phone);
+    }
+  }, [profile?.phone]);
 
   const balance = Number(wallet?.balance || 0);
   const pendingWithdrawals = withdrawals?.filter((w) => w.status === "pending") || [];

@@ -20,7 +20,7 @@ export default function Auth() {
   const [searchParams] = useSearchParams();
   const referralCode = searchParams.get("ref");
   
-  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
+  const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -29,7 +29,7 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; name?: string; phone?: string }>({});
 
-  const { signIn, signUp, resetPassword, user } = useAuth();
+  const { signIn, signUp, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -49,12 +49,10 @@ export default function Auth() {
       newErrors.email = "Invalid email address";
     }
 
-    if (mode !== "forgot") {
-      try {
-        passwordSchema.parse(password);
-      } catch {
-        newErrors.password = "Password must be at least 6 characters";
-      }
+    try {
+      passwordSchema.parse(password);
+    } catch {
+      newErrors.password = "Password must be at least 6 characters";
     }
 
     if (mode === "signup" && !fullName.trim()) {
@@ -109,14 +107,6 @@ export default function Auth() {
           }
           
           navigate("/");
-        }
-      } else if (mode === "forgot") {
-        const { error } = await resetPassword(email);
-        if (error) {
-          toast({ variant: "destructive", title: "Error", description: error.message });
-        } else {
-          toast({ title: "Email sent", description: "Check your inbox for password reset instructions" });
-          setMode("login");
         }
       }
     } finally {
@@ -173,22 +163,20 @@ export default function Auth() {
               transition={{ duration: 0.2 }}
             >
               <h2 className="text-xl font-semibold mb-6 text-center">
-                {mode === "login" && "Welcome back"}
-                {mode === "signup" && "Create your account"}
-                {mode === "forgot" && "Reset your password"}
+                {mode === "login" ? "Welcome back" : "Create your account"}
               </h2>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 {mode === "signup" && (
                   <>
                     <div className="space-y-2">
-                      <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="name">Full Name</Label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input
                           id="name"
                           type="text"
-                          placeholder="John Doe"
+                          placeholder="Wanjiku Mwangi"
                           value={fullName}
                           onChange={(e) => setFullName(e.target.value)}
                           className="pl-10"
@@ -231,8 +219,7 @@ export default function Auth() {
                   {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                 </div>
 
-                {mode !== "forgot" && (
-                  <div className="space-y-2">
+                <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -254,26 +241,14 @@ export default function Auth() {
                     </div>
                     {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
                   </div>
-                )}
 
-                {mode === "login" && (
-                  <button
-                    type="button"
-                    onClick={() => setMode("forgot")}
-                    className="text-sm text-primary hover:underline"
-                  >
-                    Forgot password?
-                  </button>
-                )}
 
                 <Button type="submit" className="w-full gap-2" disabled={isLoading}>
                   {isLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <>
-                      {mode === "login" && "Sign In"}
-                      {mode === "signup" && "Create Account"}
-                      {mode === "forgot" && "Send Reset Link"}
+                      {mode === "login" ? "Sign In" : "Create Account"}
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
