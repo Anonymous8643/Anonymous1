@@ -190,15 +190,38 @@ class ApiClient {
       this.request<{ settings: PlatformSetting[] }>("admin", "getPlatformSettings", {}),
     updatePlatformSetting: (key: string, value: Record<string, unknown>) =>
       this.request<{ success: boolean }>("admin", "updatePlatformSetting", { key, value }),
+    resetAllData: () =>
+      this.request<{ success: boolean }>("admin", "resetAllData", {}),
+    getSuspiciousActivities: () =>
+      this.request<{ activities: SuspiciousActivity[] }>("admin", "getSuspiciousActivities", {}),
+    resolveSuspiciousActivity: (id: string) =>
+      this.request<{ success: boolean }>("admin", "resolveSuspiciousActivity", { id }),
   };
 }
 
 export interface PlatformSetting {
   id: string;
   key: string;
-  value: { frozen?: boolean };
+  value: { frozen?: boolean; whatsapp_number?: string };
   updated_at: string;
   updated_by: string | null;
+}
+
+export interface SuspiciousActivity {
+  id: string;
+  user_id: string | null;
+  action: string;
+  ip_address: string | null;
+  user_agent: string | null;
+  browser: string | null;
+  device: string | null;
+  location: string | null;
+  severity: string;
+  details: Record<string, unknown>;
+  resolved: boolean;
+  resolved_by: string | null;
+  resolved_at: string | null;
+  created_at: string;
 }
 
 // Types

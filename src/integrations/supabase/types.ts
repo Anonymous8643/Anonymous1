@@ -573,6 +573,57 @@ export type Database = {
         }
         Relationships: []
       }
+      suspicious_activities: {
+        Row: {
+          action: string
+          browser: string | null
+          created_at: string
+          details: Json | null
+          device: string | null
+          id: string
+          ip_address: string | null
+          location: string | null
+          resolved: boolean | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          browser?: string | null
+          created_at?: string
+          details?: Json | null
+          device?: string | null
+          id?: string
+          ip_address?: string | null
+          location?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          browser?: string | null
+          created_at?: string
+          details?: Json | null
+          device?: string | null
+          id?: string
+          ip_address?: string | null
+          location?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number

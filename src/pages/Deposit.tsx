@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BottomNav } from "@/components/ui/BottomNav";
-import { useCurrentPaymentNumber } from "@/hooks/useAdmin";
+import { useCurrentPaymentNumber, usePublicPlatformSettings } from "@/hooks/useAdmin";
 import { useCreateDeposit, useUserDeposits } from "@/hooks/usePayments";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
@@ -24,10 +24,14 @@ export default function Deposit() {
   const paymentNumber = useCurrentPaymentNumber();
   const { data: profile } = useProfile();
   const { data: deposits } = useUserDeposits();
+  const { data: platformSettings } = usePublicPlatformSettings();
   const createDeposit = useCreateDeposit();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { depositsFrozen } = useFreezeStatus();
+  
+  // Get WhatsApp support number from settings
+  const whatsappNumber = platformSettings?.find(s => s.key === "whatsapp_support")?.value?.whatsapp_number || "+254 745 745 186";
   
   // Auto-fill phone from profile
   useEffect(() => {
@@ -287,13 +291,13 @@ export default function Deposit() {
                       If your deposit doesn't reflect within 24 hours, please contact our support team via WhatsApp:
                     </p>
                     <a
-                      href="https://wa.me/254745745186"
+                      href={`https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 mt-2 text-primary hover:underline"
                     >
                       <MessageCircle className="w-4 h-4" />
-                      +254 745 745 186
+                      {whatsappNumber}
                     </a>
                   </div>
                 </div>

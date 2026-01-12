@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, AdminDeposit, AdminWithdrawal, AdminUser, PaymentNumber, EmergencyMessage, MarketNews, Notice, PlatformStats } from "@/lib/api";
+import { api, AdminDeposit, AdminWithdrawal, AdminUser, PaymentNumber, EmergencyMessage, MarketNews, Notice, PlatformStats, SuspiciousActivity } from "@/lib/api";
 import { useAuth } from "./useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -331,7 +331,7 @@ export const useDeleteUser = () => {
 export interface PlatformSetting {
   id: string;
   key: string;
-  value: { frozen?: boolean };
+  value: { frozen?: boolean; whatsapp_number?: string };
   updated_at: string;
   updated_by: string | null;
 }
@@ -411,5 +411,52 @@ export const useRecentInvestments = () => {
     },
     refetchInterval: 30000,
     staleTime: 10000,
+  });
+};
+
+// Reset all data hook
+export const useResetAllData = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      await api.admin.resetAllData();
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["platform_stats"] });
+      queryClient.invalidateQueries({ queryKey: ["pending_deposits_admin"] });
+      queryClient.invalidateQueries({ queryKey: ["pending_withdrawals_admin"] });
+      queryClient.invalidateQueries({ queryKey: ["all_users_admin"] });
+    },
+  });
+};
+
+// Suspicious activities hooks
+export const useSuspiciousActivities = () => {
+  const { data: isAdmin } = useIsAdmin();
+
+  return useQuery({
+    queryKey: ["suspicious_activities_admin"],
+    queryFn: async () => {
+      const { activities } = await api.admin.getSuspiciousActivities();
+      return activities;
+    },
+    enabled: isAdmin,
+    refetchInterval: 30000,
+  });
+};
+
+export const useResolveSuspiciousActivity = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      await api.admin.resolveSuspiciousActivity(id);
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["suspicious_activities_admin"] });
+    },
   });
 };

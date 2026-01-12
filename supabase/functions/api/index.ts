@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-forwarded-for, x-real-ip",
 };
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -19,6 +19,54 @@ function createUserClient(authHeader: string | null) {
   return createClient(supabaseUrl, supabaseAnonKey, {
     global: { headers: { Authorization: authHeader || "" } },
   });
+}
+
+// Helper to extract client info from request
+function getClientInfo(req: Request): { ipAddress: string; userAgent: string; browser: string; device: string } {
+  const userAgent = req.headers.get("user-agent") || "Unknown";
+  const ipAddress = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || 
+                    req.headers.get("x-real-ip") || 
+                    "Unknown";
+  
+  // Parse browser from user agent
+  let browser = "Unknown";
+  if (userAgent.includes("Chrome")) browser = "Chrome";
+  else if (userAgent.includes("Firefox")) browser = "Firefox";
+  else if (userAgent.includes("Safari")) browser = "Safari";
+  else if (userAgent.includes("Edge")) browser = "Edge";
+  else if (userAgent.includes("Opera")) browser = "Opera";
+  
+  // Parse device from user agent
+  let device = "Desktop";
+  if (userAgent.includes("Mobile")) device = "Mobile";
+  else if (userAgent.includes("Tablet") || userAgent.includes("iPad")) device = "Tablet";
+  
+  return { ipAddress, userAgent, browser, device };
+}
+
+// Log suspicious activity
+async function logSuspiciousActivity(
+  userId: string | null,
+  action: string,
+  severity: "low" | "medium" | "high" | "critical",
+  details: Record<string, unknown>,
+  clientInfo: { ipAddress: string; userAgent: string; browser: string; device: string }
+) {
+  try {
+    await adminClient.from("suspicious_activities").insert({
+      user_id: userId,
+      action,
+      severity,
+      details,
+      ip_address: clientInfo.ipAddress,
+      user_agent: clientInfo.userAgent,
+      browser: clientInfo.browser,
+      device: clientInfo.device,
+    });
+    console.log(`Suspicious activity logged: ${action} (${severity})`);
+  } catch (error) {
+    console.error("Failed to log suspicious activity:", error);
+  }
 }
 
 // Helper to verify user and get claims
@@ -1523,6 +1571,49 @@ async function handleAdmin(
       const { data } = adminClient.storage.from(bucket).getPublicUrl(path);
       return jsonSuccess({ publicUrl: data.publicUrl });
     }
+    case "resetAllData": {
+      // Reset deposits, withdrawals, transactions, investments, and stats
+      const tables = ["pending_deposits", "pending_withdrawals", "transactions", "investments"];
+      
+      for (const table of tables) {
+        const { error } = await adminClient.from(table).delete().neq("id", "00000000-0000-0000-0000-000000000000");
+        if (error) console.error(`Failed to clear ${table}:`, error);
+      }
+      
+      // Reset all wallet balances
+      const { error: walletError } = await adminClient
+        .from("wallets")
+        .update({ balance: 0, total_invested: 0, total_returns: 0, pending_returns: 0 })
+        .neq("id", "00000000-0000-0000-0000-000000000000");
+      
+      if (walletError) console.error("Failed to reset wallets:", walletError);
+      
+      await adminClient.from("admin_audit_log").insert({
+        admin_id: adminId,
+        action: "reset_all_data",
+        details: { tables_cleared: tables, wallets_reset: true },
+      });
+      
+      return jsonSuccess({ success: true });
+    }
+    case "getSuspiciousActivities": {
+      const { data, error } = await adminClient
+        .from("suspicious_activities")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) return jsonError(error.message, 400);
+      return jsonSuccess({ activities: data });
+    }
+    case "resolveSuspiciousActivity": {
+      const { id } = body as { id: string };
+      const { error } = await adminClient
+        .from("suspicious_activities")
+        .update({ resolved: true, resolved_by: adminId, resolved_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) return jsonError(error.message, 400);
+      return jsonSuccess({ success: true });
+    }
     default:
       return jsonError("Invalid admin action", 400);
   }
@@ -1548,6 +1639,8 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
   
+  const clientInfo = getClientInfo(req);
+  
   try {
     const url = new URL(req.url);
     const pathParts = url.pathname.split("/").filter(Boolean);
@@ -1562,7 +1655,12 @@ serve(async (req) => {
     
     // Public routes (no auth required)
     if (resource === "auth") {
-      return await handleAuth(req, action, body);
+      // Log failed auth attempts
+      const result = await handleAuth(req, action, body);
+      if (result.status === 400 && action === "signIn") {
+        await logSuspiciousActivity(null, "failed_login_attempt", "medium", { email: body.email }, clientInfo);
+      }
+      return result;
     }
     
     if (resource === "public") {
@@ -1577,7 +1675,22 @@ serve(async (req) => {
     const { user, error: authError } = await verifyUser(authHeader);
     
     if (authError || !user) {
+      // Log unauthorized access attempts
+      await logSuspiciousActivity(null, "unauthorized_access_attempt", "high", { resource, action }, clientInfo);
       return jsonError("Unauthorized", 401);
+    }
+    
+    // Log high-value operations
+    if (resource === "withdrawals" && action === "create") {
+      const amount = body.amount as number;
+      if (amount >= 10000) {
+        await logSuspiciousActivity(user.id, "large_withdrawal_request", "medium", { amount }, clientInfo);
+      }
+    }
+    
+    // Log admin access
+    if (resource === "admin") {
+      await logSuspiciousActivity(user.id, `admin_action_${action}`, "low", { action }, clientInfo);
     }
     
     switch (resource) {
@@ -1606,6 +1719,8 @@ serve(async (req) => {
     }
   } catch (error) {
     console.error("API Error:", error);
+    // Log server errors
+    await logSuspiciousActivity(null, "server_error", "high", { error: error instanceof Error ? error.message : "Unknown" }, clientInfo);
     return jsonError(error instanceof Error ? error.message : "Internal server error", 500);
   }
 });

@@ -23,7 +23,6 @@ export default function ProductDetail() {
   const updateWallet = useUpdateWallet();
   const createTransaction = useCreateTransaction();
 
-  const [investmentAmount, setInvestmentAmount] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
@@ -32,10 +31,10 @@ export default function ProductDetail() {
     inv => inv.product_id === id && inv.status === "active"
   ) || false;
 
-  // ROI Calculator
-  const amount = Number(investmentAmount) || 0;
+  // Fixed investment amount - product price is the exact amount
+  const amount = product ? Number(product.price) : 0;
   const roi = product ? ((Number(product.expected_return) - Number(product.price)) / Number(product.price)) : 0;
-  const projectedReturn = amount * (1 + roi);
+  const projectedReturn = product ? Number(product.expected_return) : 0;
   const profit = projectedReturn - amount;
 
   // Simulated countdown for display
@@ -74,23 +73,21 @@ export default function ProductDetail() {
       return;
     }
 
-    const investAmount = Number(investmentAmount);
-    if (investAmount < Number(product.price)) {
-      toast({ variant: "destructive", title: "Error", description: `Minimum investment is KES ${Number(product.price).toLocaleString()}` });
-      return;
-    }
-
+    const investAmount = Number(product.price);
     if (investAmount > Number(wallet.balance)) {
       toast({ variant: "destructive", title: "Insufficient balance", description: "Please deposit more funds" });
       return;
     }
 
     try {
+      const investAmount = Number(product.price);
+      const expectedReturn = Number(product.expected_return);
+      
       // Create investment
       await createInvestment.mutateAsync({
         productId: product.id,
         amount: investAmount,
-        expectedReturn: projectedReturn,
+        expectedReturn: expectedReturn,
         durationDays: product.duration_days,
       });
 
@@ -222,7 +219,7 @@ export default function ProductDetail() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3">
           <div className="glass-card p-4 text-center">
-            <p className="text-xs text-muted-foreground mb-1">Min Investment</p>
+            <p className="text-xs text-muted-foreground mb-1">Investment</p>
             <p className="font-bold text-lg">KES {Number(product.price).toLocaleString()}</p>
           </div>
           <div className="glass-card p-4 text-center">
@@ -256,45 +253,30 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        {/* ROI Calculator */}
+        {/* Investment Details */}
         <div className="glass-card p-4">
           <h3 className="font-semibold mb-4 flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-primary" />
-            ROI Calculator
+            Investment Details
           </h3>
           
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm text-muted-foreground mb-2 block">Investment Amount (KES)</label>
-              <Input
-                type="number"
-                placeholder={`Min. ${Number(product.price).toLocaleString()}`}
-                value={investmentAmount}
-                onChange={(e) => setInvestmentAmount(e.target.value)}
-                className="text-lg"
-              />
+          <div className="space-y-3 border-t border-border pt-4">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Investment Amount</span>
+              <span className="font-medium">KES {amount.toLocaleString()}</span>
             </div>
-
-            {amount > 0 && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                className="space-y-3 pt-4 border-t border-border"
-              >
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Investment</span>
-                  <span className="font-medium">KES {amount.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Expected Profit</span>
-                  <span className="font-medium text-profit">+KES {profit.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-lg">
-                  <span className="font-semibold">Total Return</span>
-                  <span className="font-bold text-profit">KES {projectedReturn.toLocaleString()}</span>
-                </div>
-              </motion.div>
-            )}
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Expected Profit</span>
+              <span className="font-medium text-profit">+KES {profit.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between text-lg">
+              <span className="font-semibold">Total Return</span>
+              <span className="font-bold text-profit">KES {projectedReturn.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Duration</span>
+              <span className="font-medium">{product.duration_days} days</span>
+            </div>
           </div>
         </div>
 
@@ -321,13 +303,12 @@ export default function ProductDetail() {
         <div className="flex justify-between items-center text-sm">
           <span className="text-muted-foreground">Available Balance</span>
           <span className="font-medium">KES {Number(wallet?.balance || 0).toLocaleString()}</span>
-          <span className="font-medium">KES {Number(wallet?.balance || 0).toLocaleString()}</span>
         </div>
 
         {/* Invest Button */}
         <Button 
           className="w-full h-14 text-lg font-semibold"
-          disabled={!amount || amount < Number(product.price) || createInvestment.isPending || hasActiveInvestment}
+          disabled={amount > Number(wallet?.balance || 0) || createInvestment.isPending || hasActiveInvestment}
           onClick={handleInvest}
         >
           {createInvestment.isPending ? (

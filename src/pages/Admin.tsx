@@ -5,7 +5,8 @@ import {
   Plus, AlertTriangle, TrendingUp, TrendingDown,
   Search, ArrowLeft, Shield, MessageSquare, BarChart3,
   Newspaper, Bell, PauseCircle, PlayCircle, Image, Upload,
-  Trash2, Award, ChevronLeft, ChevronRight, Timer, Megaphone
+  Trash2, Award, ChevronLeft, ChevronRight, Timer, Megaphone,
+  MessageCircle, RefreshCw, Eye, AlertOctagon, Globe, Monitor
 } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,10 @@ import {
   useDeleteUser,
   usePlatformSettings,
   useUpdatePlatformSetting,
-  useUploadImage
+  useUploadImage,
+  useResetAllData,
+  useSuspiciousActivities,
+  useResolveSuspiciousActivity,
 } from "@/hooks/useAdmin";
 import {
   useAllEmergencyMessages,
@@ -76,6 +80,7 @@ export default function Admin() {
   const { data: marketNews } = useAllMarketNews();
   const { data: notices } = useAllNotices();
   const { data: platformSettings } = usePlatformSettings();
+  const { data: suspiciousActivities } = useSuspiciousActivities();
   
   const approveDeposit = useApproveDeposit();
   const processWithdrawal = useProcessWithdrawal();
@@ -95,6 +100,8 @@ export default function Admin() {
   const updateSetting = useUpdatePlatformSetting();
   const uploadImage = useUploadImage();
   const deleteEmergency = useDeleteEmergencyMessage();
+  const resetAllData = useResetAllData();
+  const resolveActivity = useResolveSuspiciousActivity();
   const { toast } = useToast();
 
   const [searchUser, setSearchUser] = useState("");
@@ -133,10 +140,16 @@ export default function Admin() {
   const [overlayMessage, setOverlayMessage] = useState("");
   const [overlayEndTime, setOverlayEndTime] = useState("");
   const [overlayActive, setOverlayActive] = useState(false);
+  
+  // WhatsApp support number state
+  const [whatsappNumber, setWhatsappNumber] = useState("");
 
   // Get freeze status
   const depositsFrozen = platformSettings?.find(s => s.key === "deposits_frozen")?.value?.frozen ?? false;
   const withdrawalsFrozen = platformSettings?.find(s => s.key === "withdrawals_frozen")?.value?.frozen ?? false;
+  
+  // Get current WhatsApp number from settings
+  const currentWhatsappNumber = platformSettings?.find(s => s.key === "whatsapp_support")?.value?.whatsapp_number || "";
 
   // User pagination
   const USERS_PER_PAGE = 20;
@@ -580,6 +593,75 @@ export default function Admin() {
               </Button>
             </div>
           </div>
+          
+          {/* WhatsApp Support Number */}
+          <div className="mt-4 p-3 rounded-lg bg-muted/30 space-y-3">
+            <div className="flex items-center gap-2">
+              <MessageCircle className="w-4 h-4 text-green-500" />
+              <span className="text-sm font-medium">WhatsApp Support Number</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Current: {currentWhatsappNumber || "Not set (using default)"}
+            </p>
+            <div className="flex gap-2">
+              <Input
+                placeholder="+254 7XX XXX XXX"
+                value={whatsappNumber}
+                onChange={(e) => setWhatsappNumber(e.target.value)}
+                className="flex-1"
+              />
+              <Button 
+                onClick={() => {
+                  updateSetting.mutate({
+                    key: "whatsapp_support",
+                    value: { whatsapp_number: whatsappNumber },
+                  });
+                  toast({ title: "WhatsApp number updated" });
+                }}
+                disabled={updateSetting.isPending}
+              >
+                Save
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setWhatsappNumber("");
+                  updateSetting.mutate({
+                    key: "whatsapp_support",
+                    value: { whatsapp_number: null },
+                  });
+                }}
+                disabled={updateSetting.isPending}
+              >
+                Clear
+              </Button>
+            </div>
+          </div>
+          
+          {/* Reset All Data */}
+          <div className="mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 space-y-3">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-destructive" />
+              <span className="text-sm font-medium text-destructive">Reset All Data</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              This will clear all deposits, withdrawals, transactions, investments and reset all wallet balances to 0.
+            </p>
+            <Button 
+              variant="destructive"
+              onClick={() => {
+                if (confirm("⚠️ WARNING: This will permanently delete ALL deposits, withdrawals, transactions, investments and reset ALL wallet balances to 0. This action CANNOT be undone. Are you absolutely sure?")) {
+                  resetAllData.mutate(undefined, {
+                    onSuccess: () => toast({ title: "All data has been reset" }),
+                  });
+                }
+              }}
+              disabled={resetAllData.isPending}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Reset Everything
+            </Button>
+          </div>
         </motion.div>
 
         {/* Stats */}
@@ -697,7 +779,7 @@ export default function Admin() {
         )}
 
         <Tabs defaultValue="deposits" className="w-full">
-          <TabsList className="grid w-full grid-cols-7 text-xs">
+          <TabsList className="grid w-full grid-cols-8 text-xs">
             <TabsTrigger value="deposits">Deposits</TabsTrigger>
             <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
@@ -705,6 +787,7 @@ export default function Admin() {
             <TabsTrigger value="news">News</TabsTrigger>
             <TabsTrigger value="notices">Notices</TabsTrigger>
             <TabsTrigger value="numbers">Numbers</TabsTrigger>
+            <TabsTrigger value="security">Security</TabsTrigger>
           </TabsList>
 
           <TabsContent value="deposits" className="space-y-4">
@@ -1238,6 +1321,54 @@ export default function Admin() {
                 </div>
               </div>
             ))}
+          </TabsContent>
+
+          <TabsContent value="security" className="space-y-4">
+            <div className="glass-card p-4">
+              <h3 className="font-semibold flex items-center gap-2 mb-4">
+                <Shield className="w-5 h-5 text-destructive" />
+                Suspicious Activity Log
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Real-time security monitoring with IP, browser, and device tracking.
+              </p>
+            </div>
+
+            {suspiciousActivities?.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">No suspicious activities detected</p>
+            ) : (
+              suspiciousActivities?.map((activity: any) => (
+                <div key={activity.id} className={`glass-card p-4 ${activity.resolved ? 'opacity-50' : ''} ${activity.severity === 'high' || activity.severity === 'critical' ? 'border-destructive/50' : ''}`}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant={activity.severity === 'high' || activity.severity === 'critical' ? 'destructive' : activity.severity === 'medium' ? 'secondary' : 'outline'}>
+                          {activity.severity}
+                        </Badge>
+                        <span className="font-medium">{activity.action}</span>
+                        {activity.resolved && <Badge variant="outline">Resolved</Badge>}
+                      </div>
+                      <div className="text-xs text-muted-foreground space-y-1">
+                        <p><Globe className="w-3 h-3 inline mr-1" />IP: {activity.ip_address || 'Unknown'}</p>
+                        <p><Monitor className="w-3 h-3 inline mr-1" />{activity.browser} / {activity.device}</p>
+                        <p>{formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}</p>
+                      </div>
+                    </div>
+                    {!activity.resolved && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => resolveActivity.mutate({ id: activity.id })}
+                        disabled={resolveActivity.isPending}
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        Resolve
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </TabsContent>
         </Tabs>
       </main>
