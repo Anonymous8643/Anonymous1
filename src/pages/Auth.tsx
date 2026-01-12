@@ -1,19 +1,20 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
-import { useProcessReferral } from "@/hooks/useProcessReferral";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import logo from "@/assets/logo.png";
 import { InstallButton } from "@/components/InstallPrompt";
+import { api } from "@/lib/api";
 
 const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
+const phoneSchema = z.string().min(10, "Phone number must be at least 10 digits").regex(/^[0-9+]+$/, "Invalid phone number");
 
 export default function Auth() {
   const [searchParams] = useSearchParams();
@@ -23,12 +24,12 @@ export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string; name?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string; name?: string; phone?: string }>({});
 
   const { signIn, signUp, resetPassword, user } = useAuth();
-  const { mutateAsync: processReferral } = useProcessReferral();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -40,7 +41,7 @@ export default function Auth() {
   }, [user, navigate]);
 
   const validateForm = () => {
-    const newErrors: { email?: string; password?: string; name?: string } = {};
+    const newErrors: { email?: string; password?: string; name?: string; phone?: string } = {};
     
     try {
       emailSchema.parse(email);
@@ -58,6 +59,14 @@ export default function Auth() {
 
     if (mode === "signup" && !fullName.trim()) {
       newErrors.name = "Full name is required";
+    }
+
+    if (mode === "signup") {
+      try {
+        phoneSchema.parse(phoneNumber);
+      } catch {
+        newErrors.phone = "Valid phone number is required";
+      }
     }
 
     setErrors(newErrors);
@@ -84,7 +93,7 @@ export default function Auth() {
           navigate("/");
         }
       } else if (mode === "signup") {
-        const { error } = await signUp(email, password, fullName);
+        const { error } = await signUp(email, password, fullName, phoneNumber);
         if (error) {
           if (error.message.includes("already registered")) {
             toast({ variant: "destructive", title: "Signup failed", description: "This email is already registered" });
@@ -92,11 +101,10 @@ export default function Auth() {
             toast({ variant: "destructive", title: "Signup failed", description: error.message });
           }
         } else {
-          toast({ title: "Account created!", description: referralCode ? "Welcome! Your referrer received KES 100." : "You can now log in" });
+          toast({ title: "Account created!", description: "Welcome to InvesterMate!" });
           
-          // Process referral if there's a referral code (will be processed after user is confirmed)
+          // Store referral code for processing after first login
           if (referralCode) {
-            // Store referral code for processing after first login
             localStorage.setItem("pendingReferralCode", referralCode);
           }
           
@@ -172,21 +180,39 @@ export default function Auth() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 {mode === "signup" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="name"
-                        type="text"
-                        placeholder="John Doe"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        className="pl-10"
-                      />
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name</Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="name"
+                          type="text"
+                          placeholder="John Doe"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                      {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
                     </div>
-                    {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
-                  </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="phone"
+                          type="tel"
+                          placeholder="0712345678"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                      {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+                    </div>
+                  </>
                 )}
 
                 <div className="space-y-2">

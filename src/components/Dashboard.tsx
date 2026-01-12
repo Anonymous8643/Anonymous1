@@ -25,8 +25,7 @@ import logo from "@/assets/logo.png";
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-
-import { useProcessReferral } from "@/hooks/useProcessReferral";
+import { api } from "@/lib/api";
 
 export const Dashboard = () => {
   const { user, signOut } = useAuth();
@@ -39,7 +38,6 @@ export const Dashboard = () => {
   const { data: level } = useUserLevel();
   const { mutate: updateStreak } = useUpdateStreak();
   const { mutate: claimStreakReward } = useClaimStreakReward();
-  const { mutateAsync: processReferral } = useProcessReferral();
   const { toast } = useToast();
 
   // Update streak and process pending referral on dashboard load
@@ -60,8 +58,14 @@ export const Dashboard = () => {
       // Process pending referral code if exists
       const pendingReferralCode = localStorage.getItem("pendingReferralCode");
       if (pendingReferralCode) {
-        processReferral({ referralCode: pendingReferralCode, newUserId: user.id })
-          .then(() => localStorage.removeItem("pendingReferralCode"))
+        api.referrals.process(pendingReferralCode)
+          .then(() => {
+            localStorage.removeItem("pendingReferralCode");
+            toast({
+              title: "🎉 Referral Applied!",
+              description: "Your referrer will receive a bonus when you make your first deposit!",
+            });
+          })
           .catch(() => localStorage.removeItem("pendingReferralCode"));
       }
     }

@@ -18,6 +18,7 @@ import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Terms from "./pages/Terms";
 import News from "./pages/News";
+import AboutUs from "./pages/AboutUs";
 
 const queryClient = new QueryClient();
 
@@ -73,6 +74,7 @@ const AppRoutes = () => {
       <Route path="/news" element={<ProtectedRoute><News /></ProtectedRoute>} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<Terms />} />
+      <Route path="/about" element={<ProtectedRoute><AboutUs /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
