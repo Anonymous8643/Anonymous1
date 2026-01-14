@@ -49,6 +49,8 @@ class ApiClient {
     signOut: () => this.request("auth", "signOut", {}),
     resetPassword: (email: string, redirectTo: string) =>
       this.request("auth", "resetPassword", { email, redirectTo }),
+    updatePassword: (newPassword: string) =>
+      this.request<{ success: boolean }>("auth", "updatePassword", { newPassword }),
     getSession: () => this.request<{ session: unknown }>("auth", "getSession", {}),
   };
 

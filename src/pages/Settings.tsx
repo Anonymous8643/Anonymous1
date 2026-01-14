@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
-  User, Lock, Bell, Wallet, CreditCard, Moon, Sun, 
-  ChevronRight, Shield, LogOut, Phone, Mail, Edit2, Save, Loader2, Eye, EyeOff 
+  User, Bell, Wallet, CreditCard, Moon, Sun, 
+  ChevronRight, Shield, LogOut, Phone, Mail, Edit2, Save, Loader2, Eye, EyeOff, Lock 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import { formatDistanceToNow } from "date-fns";
 import logo from "@/assets/logo.png";
 import { Link } from "react-router-dom";
 import { useTheme } from "next-themes";
+import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 
 export default function Settings() {
   const { user, signOut } = useAuth();
@@ -366,13 +367,7 @@ export default function Settings() {
               </Button>
             </Link>
 
-            <Button variant="outline" className="w-full justify-between">
-              <span className="flex items-center gap-2">
-                <Lock className="w-4 h-4" />
-                Change Password
-              </span>
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+            <ChangePasswordDialog />
 
             <Button variant="outline" className="w-full justify-between">
               <span className="flex items-center gap-2">

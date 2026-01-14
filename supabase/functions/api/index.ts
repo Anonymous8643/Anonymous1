@@ -251,6 +251,33 @@ async function handleAuth(
       if (error) return jsonError(error.message, 400);
       return jsonSuccess({ success: true });
     }
+    case "updatePassword": {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        return jsonError("Unauthorized", 401);
+      }
+      
+      const { newPassword } = body as { newPassword: string };
+      if (!newPassword || newPassword.length < 6) {
+        return jsonError("Password must be at least 6 characters", 400);
+      }
+      
+      // Use admin client to update password
+      const supabase = createUserClient(authHeader);
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData?.session?.user?.id) {
+        return jsonError("User not found", 400);
+      }
+      
+      const { error } = await adminClient.auth.admin.updateUserById(
+        sessionData.session.user.id,
+        { password: newPassword }
+      );
+      
+      if (error) return jsonError(error.message, 400);
+      return jsonSuccess({ success: true });
+    }
     case "getSession": {
       const authHeader = req.headers.get("Authorization");
       const supabase = createUserClient(authHeader);
@@ -552,6 +579,152 @@ async function handleInvestments(
         description: `Investment purchase`,
         status: "completed",
       });
+      
+      // Check if this is user's first investment - award referrer if applicable
+      try {
+        const { data: existingInvestments } = await adminClient
+          .from("investments")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("status", "active");
+        
+        // If this is the first investment, process referral reward
+        if (existingInvestments && existingInvestments.length === 1) {
+          // Get user's profile to check if they were referred
+          const { data: userProfile } = await adminClient
+            .from("profiles")
+            .select("id, referred_by")
+            .eq("user_id", userId)
+            .single();
+          
+          if (userProfile?.referred_by) {
+            // Find the referral record
+            const { data: referral } = await adminClient
+              .from("referrals")
+              .select("id, referrer_id, status")
+              .eq("referred_id", userProfile.id)
+              .eq("status", "pending")
+              .maybeSingle();
+            
+            if (referral) {
+              // Get referrer's user_id from their profile
+              const { data: referrerProfile } = await adminClient
+                .from("profiles")
+                .select("user_id")
+                .eq("id", referral.referrer_id)
+                .single();
+              
+              if (referrerProfile) {
+                // Add KES 100 to referrer's wallet
+                const { data: referrerWallet } = await adminClient
+                  .from("wallets")
+                  .select("balance")
+                  .eq("user_id", referrerProfile.user_id)
+                  .single();
+                
+                if (referrerWallet) {
+                  const REFERRAL_REWARD = 100;
+                  
+                  await adminClient
+                    .from("wallets")
+                    .update({ balance: Number(referrerWallet.balance) + REFERRAL_REWARD })
+                    .eq("user_id", referrerProfile.user_id);
+                  
+                  // Create transaction for referrer
+                  await adminClient.from("transactions").insert({
+                    user_id: referrerProfile.user_id,
+                    type: "referral_bonus",
+                    amount: REFERRAL_REWARD,
+                    description: "Referral reward - Referred user made first investment",
+                    status: "completed",
+                  });
+                  
+                  // Update referral status to rewarded
+                  await adminClient
+                    .from("referrals")
+                    .update({ status: "rewarded" })
+                    .eq("id", referral.id);
+                  
+                  console.log(`Referral reward of ${REFERRAL_REWARD} given to user ${referrerProfile.user_id}`);
+                }
+              }
+            }
+          }
+          
+          // Grant first investment achievement
+          const { data: firstInvestAchievement } = await adminClient
+            .from("achievements")
+            .select("id, reward_amount, xp_reward, title")
+            .eq("code", "first_investment")
+            .eq("is_active", true)
+            .maybeSingle();
+          
+          if (firstInvestAchievement) {
+            // Check if user already has this achievement
+            const { data: existingAchievement } = await adminClient
+              .from("user_achievements")
+              .select("id")
+              .eq("user_id", userId)
+              .eq("achievement_id", firstInvestAchievement.id)
+              .maybeSingle();
+            
+            if (!existingAchievement) {
+              // Grant achievement
+              await adminClient.from("user_achievements").insert({
+                user_id: userId,
+                achievement_id: firstInvestAchievement.id,
+              });
+              
+              // Add achievement reward to wallet
+              if (firstInvestAchievement.reward_amount > 0) {
+                const { data: currentWallet } = await adminClient
+                  .from("wallets")
+                  .select("balance")
+                  .eq("user_id", userId)
+                  .single();
+                
+                if (currentWallet) {
+                  await adminClient
+                    .from("wallets")
+                    .update({ balance: Number(currentWallet.balance) + firstInvestAchievement.reward_amount })
+                    .eq("user_id", userId);
+                  
+                  await adminClient.from("transactions").insert({
+                    user_id: userId,
+                    type: "achievement_reward",
+                    amount: firstInvestAchievement.reward_amount,
+                    description: `Achievement unlocked: ${firstInvestAchievement.title}`,
+                    status: "completed",
+                  });
+                }
+              }
+              
+              // Add XP
+              if (firstInvestAchievement.xp_reward > 0) {
+                const { data: userLevel } = await adminClient
+                  .from("user_levels")
+                  .select("current_xp, total_xp")
+                  .eq("user_id", userId)
+                  .single();
+                
+                if (userLevel) {
+                  await adminClient
+                    .from("user_levels")
+                    .update({
+                      current_xp: userLevel.current_xp + firstInvestAchievement.xp_reward,
+                      total_xp: userLevel.total_xp + firstInvestAchievement.xp_reward,
+                    })
+                    .eq("user_id", userId);
+                }
+              }
+              
+              console.log(`First investment achievement granted to user ${userId}`);
+            }
+          }
+        }
+      } catch (referralError) {
+        console.error("Failed to process referral/achievement:", referralError);
+      }
       
       // Update weekly challenge progress for investment-type challenges
       try {
@@ -952,14 +1125,22 @@ async function handleGamification(
       
       const earnedIds = new Set(userAchievements?.map(ua => ua.achievement_id) || []);
       
+      // Get user's profile id for referral counting
+      const { data: userProfile } = await adminClient
+        .from("profiles")
+        .select("id")
+        .eq("user_id", userId)
+        .single();
+      
       // Get user stats for checking requirements
       const [investmentsRes, depositsRes, referralsRes, streakRes] = await Promise.all([
-        adminClient.from("investments").select("amount").eq("user_id", userId).eq("status", "active"),
+        adminClient.from("investments").select("id, amount").eq("user_id", userId).eq("status", "active"),
         adminClient.from("pending_deposits").select("amount").eq("user_id", userId).eq("status", "approved"),
-        adminClient.from("referrals").select("id").eq("referrer_id", userId),
+        userProfile ? adminClient.from("referrals").select("id").eq("referrer_id", userProfile.id).eq("status", "rewarded") : { data: [] },
         adminClient.from("user_streaks").select("current_streak, longest_streak").eq("user_id", userId).single(),
       ]);
       
+      const investmentCount = investmentsRes.data?.length || 0;
       const totalInvested = investmentsRes.data?.reduce((sum, i) => sum + Number(i.amount), 0) || 0;
       const totalDeposited = depositsRes.data?.reduce((sum, d) => sum + Number(d.amount), 0) || 0;
       const referralCount = referralsRes.data?.length || 0;
@@ -972,6 +1153,9 @@ async function handleGamification(
         
         let earned = false;
         switch (achievement.requirement_type) {
+          case "investment_count":
+            earned = investmentCount >= achievement.requirement_value;
+            break;
           case "total_invested":
             earned = totalInvested >= achievement.requirement_value;
             break;
@@ -1013,6 +1197,25 @@ async function handleGamification(
                 description: `Achievement unlocked: ${achievement.title}`,
                 status: "completed",
               });
+            }
+          }
+          
+          // Add XP to user level
+          if (achievement.xp_reward > 0) {
+            const { data: userLevel } = await adminClient
+              .from("user_levels")
+              .select("current_xp, total_xp")
+              .eq("user_id", userId)
+              .single();
+            
+            if (userLevel) {
+              await adminClient
+                .from("user_levels")
+                .update({
+                  current_xp: userLevel.current_xp + achievement.xp_reward,
+                  total_xp: userLevel.total_xp + achievement.xp_reward,
+                })
+                .eq("user_id", userId);
             }
           }
           
