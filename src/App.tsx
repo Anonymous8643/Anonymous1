@@ -84,18 +84,18 @@ const AppRoutes = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="light" storageKey="investermate-theme">
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <ThemeProvider attribute="class" defaultTheme="light" storageKey="investermate-theme">
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
             <OverlayMessage />
             <AppRoutes />
-          </AuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
-    </ThemeProvider>
+          </TooltipProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 
