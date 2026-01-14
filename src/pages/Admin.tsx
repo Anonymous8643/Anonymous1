@@ -7,7 +7,7 @@ import {
   Newspaper, Bell, PauseCircle, PlayCircle, Image, Upload,
   Trash2, Award, ChevronLeft, ChevronRight, Timer, Megaphone,
   MessageCircle, RefreshCw, Eye, AlertOctagon, Globe, Monitor,
-  Package, UserCog
+  Package, UserCog, Camera
 } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -61,6 +61,13 @@ import {
   useToggleEmergencyMessage,
   useDeleteEmergencyMessage,
 } from "@/hooks/useEmergencyMessages";
+import {
+  useAllPaymentScreenshots,
+  useAddPaymentScreenshot,
+  useTogglePaymentScreenshot,
+  useDeletePaymentScreenshot,
+  useUploadPaymentScreenshot,
+} from "@/hooks/usePaymentScreenshots";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import {
@@ -93,6 +100,7 @@ export default function Admin() {
   const { data: suspiciousActivities } = useSuspiciousActivities();
   const { data: allProducts } = useAllProducts();
   const { data: allManagers } = useAllManagers();
+  const { data: paymentScreenshots } = useAllPaymentScreenshots();
   const approveDeposit = useApproveDeposit();
   const processWithdrawal = useProcessWithdrawal();
   const updateBalance = useUpdateUserBalance();
@@ -118,6 +126,10 @@ export default function Admin() {
   const toggleManager = useToggleManager();
   const deleteManager = useDeleteManager();
   const reassignManager = useReassignManager();
+  const addScreenshot = useAddPaymentScreenshot();
+  const toggleScreenshot = useTogglePaymentScreenshot();
+  const deleteScreenshot = useDeletePaymentScreenshot();
+  const uploadScreenshot = useUploadPaymentScreenshot();
   const { toast } = useToast();
 
   const [searchUser, setSearchUser] = useState("");
@@ -164,6 +176,10 @@ export default function Admin() {
   const [newManagerName, setNewManagerName] = useState("");
   const [newManagerWhatsApp, setNewManagerWhatsApp] = useState("");
   const [newManagerMessage, setNewManagerMessage] = useState("");
+  
+  // Payment screenshot state
+  const [newScreenshotCaption, setNewScreenshotCaption] = useState("");
+  const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
 
   // Get freeze status
   const depositsFrozen = platformSettings?.find(s => s.key === "deposits_frozen")?.value?.frozen ?? false;
@@ -800,12 +816,13 @@ export default function Admin() {
         )}
 
         <Tabs defaultValue="deposits" className="w-full">
-          <TabsList className="grid w-full grid-cols-10 text-xs">
+          <TabsList className="grid w-full grid-cols-11 text-xs">
             <TabsTrigger value="deposits">Deposits</TabsTrigger>
             <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="products">Products</TabsTrigger>
             <TabsTrigger value="managers">Managers</TabsTrigger>
+            <TabsTrigger value="proofs">Proofs</TabsTrigger>
             <TabsTrigger value="messages">Alerts</TabsTrigger>
             <TabsTrigger value="news">News</TabsTrigger>
             <TabsTrigger value="notices">Notices</TabsTrigger>
@@ -1521,6 +1538,125 @@ export default function Admin() {
                   </div>
                 </div>
               ))
+            )}
+          </TabsContent>
+
+          <TabsContent value="proofs" className="space-y-4">
+            <div className="glass-card p-4">
+              <h3 className="font-semibold flex items-center gap-2 mb-4">
+                <Camera className="w-5 h-5 text-profit" />
+                Upload Payment Screenshot
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Upload payment screenshots to motivate users. These will be displayed on the dashboard.
+              </p>
+              <div className="space-y-3">
+                <Input
+                  placeholder="Caption (optional)"
+                  value={newScreenshotCaption}
+                  onChange={(e) => setNewScreenshotCaption(e.target.value)}
+                />
+                <div className="flex gap-2">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    id="screenshot-upload"
+                    className="flex-1"
+                    disabled={uploadingScreenshot}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      
+                      setUploadingScreenshot(true);
+                      try {
+                        const { publicUrl } = await uploadScreenshot.mutateAsync({ file });
+                        await addScreenshot.mutateAsync({ 
+                          imageUrl: publicUrl, 
+                          caption: newScreenshotCaption || undefined 
+                        });
+                        setNewScreenshotCaption("");
+                        toast({ title: "Screenshot uploaded", description: "Payment proof is now visible to users" });
+                        // Reset file input
+                        e.target.value = "";
+                      } catch (error) {
+                        toast({ variant: "destructive", title: "Error", description: "Failed to upload screenshot" });
+                      } finally {
+                        setUploadingScreenshot(false);
+                      }
+                    }}
+                  />
+                </div>
+                {uploadingScreenshot && (
+                  <p className="text-sm text-muted-foreground">Uploading...</p>
+                )}
+              </div>
+            </div>
+
+            {paymentScreenshots?.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">No payment screenshots uploaded</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {paymentScreenshots?.map((screenshot: any) => (
+                  <div key={screenshot.id} className={`glass-card overflow-hidden ${!screenshot.is_active ? 'opacity-50' : ''}`}>
+                    <div className="relative h-40">
+                      <img 
+                        src={screenshot.image_url} 
+                        alt={screenshot.caption || "Payment screenshot"} 
+                        className="w-full h-full object-cover"
+                      />
+                      {!screenshot.is_active && (
+                        <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
+                          <Badge variant="secondary">Hidden</Badge>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {screenshot.caption || "No caption"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mb-3">
+                        {formatDistanceToNow(new Date(screenshot.created_at), { addSuffix: true })}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs ${screenshot.is_active ? 'text-profit' : 'text-muted-foreground'}`}>
+                            {screenshot.is_active ? 'Visible' : 'Hidden'}
+                          </span>
+                          <Switch
+                            checked={screenshot.is_active}
+                            onCheckedChange={(checked) => {
+                              toggleScreenshot.mutate({ id: screenshot.id, isActive: checked }, {
+                                onSuccess: () => {
+                                  toast({
+                                    title: checked ? "Screenshot visible" : "Screenshot hidden",
+                                  });
+                                },
+                              });
+                            }}
+                            disabled={toggleScreenshot.isPending}
+                          />
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            if (confirm("Are you sure you want to delete this screenshot?")) {
+                              deleteScreenshot.mutate({ id: screenshot.id }, {
+                                onSuccess: () => {
+                                  toast({ title: "Screenshot deleted" });
+                                },
+                              });
+                            }
+                          }}
+                          disabled={deleteScreenshot.isPending}
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </TabsContent>
 
