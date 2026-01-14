@@ -28,20 +28,23 @@ export const LiveActivityFeed = () => {
   const [displayedItems, setDisplayedItems] = useState<any[]>([]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Auto-rotate through investments continuously
+  // Auto-rotate through investments continuously every 2 minutes
   useEffect(() => {
     if (!investments || investments.length === 0) return;
 
     // Initialize with first 5 items
-    const initialItems = investments.slice(0, Math.min(5, investments.length));
+    const initialItems = investments.slice(0, Math.min(5, investments.length)).map((inv, i) => ({
+      ...inv,
+      displayKey: `${i}-${Date.now()}`
+    }));
     setDisplayedItems(initialItems);
 
-    // Start auto-rotation every 3 seconds
+    // Start auto-rotation every 2 minutes (120000ms)
     intervalRef.current = setInterval(() => {
       setCurrentIndex((prev) => {
         const nextIndex = (prev + 1) % investments.length;
         
-        // Update displayed items with a sliding window effect
+        // Update displayed items with a smooth sliding window effect
         setDisplayedItems(() => {
           const newItems = [];
           for (let i = 0; i < Math.min(5, investments.length); i++) {
@@ -53,7 +56,7 @@ export const LiveActivityFeed = () => {
         
         return nextIndex;
       });
-    }, 3000);
+    }, 120000); // 2 minutes
 
     return () => {
       if (intervalRef.current) {
@@ -79,16 +82,16 @@ export const LiveActivityFeed = () => {
           {displayedItems.map((investment: any, index: number) => (
             <motion.div
               key={investment.displayKey || `${investment.created_at}-${index}`}
-              initial={{ opacity: 0, x: -20, height: 0 }}
-              animate={{ opacity: 1, x: 0, height: "auto" }}
-              exit={{ opacity: 0, x: 20, height: 0 }}
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
               transition={{ 
-                duration: 0.4, 
-                delay: index * 0.05,
-                ease: "easeOut"
+                duration: 0.6, 
+                delay: index * 0.1,
+                ease: [0.4, 0, 0.2, 1]
               }}
               layout
-              className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50"
+              className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50 transition-all duration-500"
             >
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
