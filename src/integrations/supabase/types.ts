@@ -265,6 +265,36 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_screenshots: {
+        Row: {
+          caption: string | null
+          created_at: string
+          created_by: string
+          display_order: number
+          id: string
+          image_url: string
+          is_active: boolean
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          created_by: string
+          display_order?: number
+          id?: string
+          image_url: string
+          is_active?: boolean
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          created_by?: string
+          display_order?: number
+          id?: string
+          image_url?: string
+          is_active?: boolean
+        }
+        Relationships: []
+      }
       pending_deposits: {
         Row: {
           admin_notes: string | null

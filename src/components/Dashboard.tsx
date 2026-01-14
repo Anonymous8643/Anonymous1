@@ -12,6 +12,7 @@ import { FreezeStatusBanner } from "./FreezeStatusBanner";
 import { ActiveInvestments } from "./ActiveInvestments";
 import { CommunityLink } from "./CommunityLink";
 import { PersonalManagerCard } from "./PersonalManagerCard";
+import { PaymentProofs } from "./PaymentProofs";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useWallet } from "@/hooks/useWallet";
@@ -265,6 +266,9 @@ export const Dashboard = () => {
 
         {/* Active Investments with Countdown */}
         <ActiveInvestments />
+
+        {/* Payment Proofs */}
+        <PaymentProofs />
 
         {/* Live Activity Feed */}
         <LiveActivityFeed />
