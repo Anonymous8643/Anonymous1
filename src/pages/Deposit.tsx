@@ -31,7 +31,8 @@ export default function Deposit() {
   const { depositsFrozen } = useFreezeStatus();
   
   // Get WhatsApp support number from settings
-  const whatsappNumber = platformSettings?.find(s => s.key === "whatsapp_support")?.value?.whatsapp_number || "+254 745 745 186";
+  const whatsappSetting = platformSettings?.find(s => s.key === "whatsapp_support")?.value as Record<string, unknown> | undefined;
+  const whatsappNumber = String(whatsappSetting?.whatsapp_number || "+254 745 745 186");
   
   // Auto-fill phone from profile
   useEffect(() => {

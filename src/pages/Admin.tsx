@@ -7,7 +7,7 @@ import {
   Newspaper, Bell, PauseCircle, PlayCircle, Image, Upload,
   Trash2, Award, ChevronLeft, ChevronRight, Timer, Megaphone,
   MessageCircle, RefreshCw, Eye, AlertOctagon, Globe, Monitor,
-  Package, UserCog, Camera
+  Package, UserCog, Camera, Settings, PieChart
 } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -70,6 +70,8 @@ import {
 } from "@/hooks/usePaymentScreenshots";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
+import { AdminAnalytics } from "@/components/admin/AdminAnalytics";
+import { AdminSettings } from "@/components/admin/AdminSettings";
 import {
   Dialog,
   DialogContent,
@@ -182,11 +184,14 @@ export default function Admin() {
   const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
 
   // Get freeze status
-  const depositsFrozen = platformSettings?.find(s => s.key === "deposits_frozen")?.value?.frozen ?? false;
-  const withdrawalsFrozen = platformSettings?.find(s => s.key === "withdrawals_frozen")?.value?.frozen ?? false;
+  const depositsSetting = platformSettings?.find(s => s.key === "deposits_frozen")?.value as Record<string, unknown> | undefined;
+  const withdrawalsSetting = platformSettings?.find(s => s.key === "withdrawals_frozen")?.value as Record<string, unknown> | undefined;
+  const depositsFrozen = Boolean(depositsSetting?.frozen);
+  const withdrawalsFrozen = Boolean(withdrawalsSetting?.frozen);
   
   // Get current WhatsApp number from settings
-  const currentWhatsappNumber = platformSettings?.find(s => s.key === "whatsapp_support")?.value?.whatsapp_number || "";
+  const whatsappSetting = platformSettings?.find(s => s.key === "whatsapp_support")?.value as Record<string, unknown> | undefined;
+  const currentWhatsappNumber = String(whatsappSetting?.whatsapp_number || "");
 
   // User pagination
   const USERS_PER_PAGE = 20;
@@ -815,8 +820,9 @@ export default function Admin() {
           </motion.div>
         )}
 
-        <Tabs defaultValue="deposits" className="w-full">
-          <TabsList className="grid w-full grid-cols-11 text-xs">
+        <Tabs defaultValue="analytics" className="w-full">
+          <TabsList className="grid w-full grid-cols-13 text-xs">
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="deposits">Deposits</TabsTrigger>
             <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
@@ -828,7 +834,12 @@ export default function Admin() {
             <TabsTrigger value="notices">Notices</TabsTrigger>
             <TabsTrigger value="numbers">Numbers</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="analytics" className="space-y-4 mt-4">
+            <AdminAnalytics />
+          </TabsContent>
 
           <TabsContent value="deposits" className="space-y-4">
             {pendingDeposits.length === 0 ? (
@@ -1706,6 +1717,10 @@ export default function Admin() {
                 </div>
               ))
             )}
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-4 mt-4">
+            <AdminSettings />
           </TabsContent>
         </Tabs>
       </main>

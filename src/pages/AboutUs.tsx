@@ -5,11 +5,32 @@ import { BottomNav } from "@/components/ui/BottomNav";
 import logo from "@/assets/logo.png";
 import ceoImage from "@/assets/ceo-michael-chen.jpg";
 import businessPermit from "@/assets/business-permit.png";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function AboutUs() {
   const [showPermit, setShowPermit] = useState(false);
+  const [officePhone, setOfficePhone] = useState("+254 700 123 456");
+  const [officeEmail, setOfficeEmail] = useState("support@investermate.co.ke");
+
+  // Fetch configurable contact details
+  useEffect(() => {
+    const fetchContactSettings = async () => {
+      const { data } = await supabase
+        .from("platform_settings")
+        .select("*")
+        .eq("key", "office_contact")
+        .maybeSingle();
+      
+      if (data?.value) {
+        const value = data.value as { phone?: string; email?: string };
+        if (value.phone) setOfficePhone(value.phone);
+        if (value.email) setOfficeEmail(value.email);
+      }
+    };
+    fetchContactSettings();
+  }, []);
 
   const features = [
     {
@@ -228,7 +249,7 @@ export default function AboutUs() {
               <Phone className="w-5 h-5 text-muted-foreground" />
               <div>
                 <p className="text-sm text-muted-foreground">Customer Support</p>
-                <p className="font-medium">+254 700 123 456</p>
+                <p className="font-medium">{officePhone}</p>
               </div>
             </div>
             
@@ -236,7 +257,7 @@ export default function AboutUs() {
               <Mail className="w-5 h-5 text-muted-foreground" />
               <div>
                 <p className="text-sm text-muted-foreground">Email</p>
-                <p className="font-medium">support@investermate.co.ke</p>
+                <p className="font-medium">{officeEmail}</p>
               </div>
             </div>
           </div>

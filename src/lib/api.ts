@@ -223,7 +223,7 @@ class ApiClient {
 export interface PlatformSetting {
   id: string;
   key: string;
-  value: { frozen?: boolean; whatsapp_number?: string };
+  value: Record<string, unknown>;
   updated_at: string;
   updated_by: string | null;
 }

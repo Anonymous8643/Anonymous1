@@ -13,12 +13,15 @@ interface FreezeInfo {
 export const useFreezeStatus = (): FreezeInfo & { isLoading: boolean } => {
   const { data: settings, isLoading } = usePublicPlatformSettings();
 
-  const depositsFrozen = settings?.find((s: PlatformSetting) => s.key === "deposits_frozen")?.value?.frozen ?? false;
-  const withdrawalsFrozen = settings?.find((s: PlatformSetting) => s.key === "withdrawals_frozen")?.value?.frozen ?? false;
+  const depositsSetting = settings?.find((s: PlatformSetting) => s.key === "deposits_frozen")?.value as Record<string, unknown> | undefined;
+  const withdrawalsSetting = settings?.find((s: PlatformSetting) => s.key === "withdrawals_frozen")?.value as Record<string, unknown> | undefined;
   
-  const maintenanceSetting = settings?.find((s: PlatformSetting) => s.key === "maintenance_message")?.value;
-  const maintenanceMessage = (maintenanceSetting as any)?.message ?? null;
-  const maintenanceEndTime = (maintenanceSetting as any)?.end_time ?? null;
+  const depositsFrozen = Boolean(depositsSetting?.frozen);
+  const withdrawalsFrozen = Boolean(withdrawalsSetting?.frozen);
+  
+  const maintenanceSetting = settings?.find((s: PlatformSetting) => s.key === "maintenance_message")?.value as Record<string, unknown> | undefined;
+  const maintenanceMessage = (maintenanceSetting?.message as string) ?? null;
+  const maintenanceEndTime = (maintenanceSetting?.end_time as string) ?? null;
 
   return {
     depositsFrozen,

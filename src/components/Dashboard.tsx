@@ -74,22 +74,36 @@ export const Dashboard = () => {
       // Process welcome bonus for new users
       const newUserWelcomeBonus = localStorage.getItem("newUserWelcomeBonus");
       if (newUserWelcomeBonus === "true" && wallet) {
-        // Give KES 50 welcome bonus
-        api.wallet.update({ balance: Number(wallet.balance) + 50 })
-          .then(() => {
+        // Fetch configurable welcome bonus amount from platform settings
+        const fetchAndApplyBonus = async () => {
+          try {
+            const { data: settings } = await import("@/integrations/supabase/client").then(m => 
+              m.supabase.from("platform_settings").select("*").eq("key", "welcome_bonus").maybeSingle()
+            );
+            
+            const bonusAmount = (settings?.value as { amount?: number })?.amount ?? 50;
+            
+            if (bonusAmount > 0) {
+              await api.wallet.update({ balance: Number(wallet.balance) + bonusAmount });
+              localStorage.removeItem("newUserWelcomeBonus");
+              await api.transactions.create({
+                type: "bonus",
+                amount: bonusAmount,
+                description: "Welcome bonus for first-time registration",
+                status: "completed",
+              });
+              toast({
+                title: "🎁 Welcome Bonus!",
+                description: `You received KES ${bonusAmount} as a welcome gift! Start investing today!`,
+              });
+            } else {
+              localStorage.removeItem("newUserWelcomeBonus");
+            }
+          } catch {
             localStorage.removeItem("newUserWelcomeBonus");
-            api.transactions.create({
-              type: "bonus",
-              amount: 50,
-              description: "Welcome bonus for first-time registration",
-              status: "completed",
-            });
-            toast({
-              title: "🎁 Welcome Bonus!",
-              description: "You received KES 50 as a welcome gift! Start investing today!",
-            });
-          })
-          .catch(() => localStorage.removeItem("newUserWelcomeBonus"));
+          }
+        };
+        fetchAndApplyBonus();
       }
     }
   }, [user?.id, wallet?.id]);
