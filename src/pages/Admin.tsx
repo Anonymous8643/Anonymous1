@@ -182,6 +182,9 @@ export default function Admin() {
   // Payment screenshot state
   const [newScreenshotCaption, setNewScreenshotCaption] = useState("");
   const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
+  
+  // Admin tab state
+  const [activeTab, setActiveTab] = useState("analytics");
 
   // Get freeze status
   const depositsSetting = platformSettings?.find(s => s.key === "deposits_frozen")?.value as Record<string, unknown> | undefined;
@@ -821,16 +824,9 @@ export default function Admin() {
         )}
 
         {/* Admin Tabs with Dropdown */}
-        <Tabs defaultValue="analytics" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="sticky top-16 z-30 bg-background/95 backdrop-blur-sm py-3 border-b border-border -mx-4 px-4 mb-4">
-            <Select 
-              defaultValue="analytics" 
-              onValueChange={(value) => {
-                // Click the hidden tab trigger
-                const trigger = document.querySelector(`[data-radix-collection-item][value="${value}"]`) as HTMLElement;
-                if (trigger) trigger.click();
-              }}
-            >
+            <Select value={activeTab} onValueChange={setActiveTab}>
               <SelectTrigger className="w-full bg-card border-2 border-primary/20 shadow-lg">
                 <div className="flex items-center gap-2">
                   <PieChart className="w-4 h-4 text-primary" />
@@ -919,23 +915,6 @@ export default function Admin() {
               </SelectContent>
             </Select>
           </div>
-          
-          {/* Hidden TabsList for state management */}
-          <TabsList className="hidden">
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="deposits">Deposits</TabsTrigger>
-            <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="products">Products</TabsTrigger>
-            <TabsTrigger value="managers">Managers</TabsTrigger>
-            <TabsTrigger value="proofs">Proofs</TabsTrigger>
-            <TabsTrigger value="messages">Alerts</TabsTrigger>
-            <TabsTrigger value="news">News</TabsTrigger>
-            <TabsTrigger value="notices">Notices</TabsTrigger>
-            <TabsTrigger value="numbers">Numbers</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
 
           <TabsContent value="analytics" className="space-y-4 mt-4">
             <AdminAnalytics />
