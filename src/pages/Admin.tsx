@@ -68,6 +68,7 @@ import {
   useDeletePaymentScreenshot,
   useUploadPaymentScreenshot,
 } from "@/hooks/usePaymentScreenshots";
+import { useSendUserMessage } from "@/hooks/useAdminMessages";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { AdminAnalytics } from "@/components/admin/AdminAnalytics";
@@ -182,6 +183,13 @@ export default function Admin() {
   // Payment screenshot state
   const [newScreenshotCaption, setNewScreenshotCaption] = useState("");
   const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
+  
+  // User message state
+  const [messageTitle, setMessageTitle] = useState("");
+  const [messageContent, setMessageContent] = useState("");
+  const [messageType, setMessageType] = useState("warning");
+  const [messageUserId, setMessageUserId] = useState("");
+  const sendMessage = useSendUserMessage();
   
   // Admin tab state
   const [activeTab, setActiveTab] = useState("analytics");
@@ -1044,20 +1052,101 @@ export default function Admin() {
                       )}
                     </div>
                   </div>
-                  <div className="text-right flex-shrink-0">
+                  <div className="text-right flex-shrink-0 space-y-2">
                     <p className="font-bold text-profit">
                       KES {Number(user.wallets?.[0]?.balance || 0).toLocaleString()}
                     </p>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setSelectedUser(user)}
-                        >
-                          <Wallet className="w-4 h-4 mr-1" /> Adjust
-                        </Button>
-                      </DialogTrigger>
+                    <div className="flex gap-1 flex-wrap justify-end">
+                      {/* Send Message Button */}
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-yellow-500 text-yellow-500 hover:bg-yellow-500/10"
+                            onClick={() => setMessageUserId(user.user_id)}
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                              <MessageSquare className="w-5 h-5 text-yellow-500" />
+                              Send Message to {user.full_name || user.email}
+                            </DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                              <Label>Message Type</Label>
+                              <Select value={messageType} onValueChange={setMessageType}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="warning">⚠️ Warning</SelectItem>
+                                  <SelectItem value="info">ℹ️ Info</SelectItem>
+                                  <SelectItem value="success">✅ Success</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Title</Label>
+                              <Input
+                                placeholder="Message title"
+                                value={messageTitle}
+                                onChange={(e) => setMessageTitle(e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Message</Label>
+                              <Textarea
+                                placeholder="Type your message..."
+                                value={messageContent}
+                                onChange={(e) => setMessageContent(e.target.value)}
+                                rows={4}
+                              />
+                            </div>
+                            <Button
+                              className="w-full"
+                              onClick={() => {
+                                if (!messageTitle || !messageContent) return;
+                                sendMessage.mutate({
+                                  userId: user.user_id,
+                                  title: messageTitle,
+                                  message: messageContent,
+                                  type: messageType,
+                                }, {
+                                  onSuccess: () => {
+                                    toast({ title: "Message sent", description: `Message sent to ${user.full_name || user.email}` });
+                                    setMessageTitle("");
+                                    setMessageContent("");
+                                    setMessageType("warning");
+                                  },
+                                  onError: () => {
+                                    toast({ variant: "destructive", title: "Error", description: "Failed to send message" });
+                                  },
+                                });
+                              }}
+                              disabled={!messageTitle || !messageContent || sendMessage.isPending}
+                            >
+                              {sendMessage.isPending ? "Sending..." : "Send Message"}
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                      
+                      {/* Adjust Balance Button */}
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setSelectedUser(user)}
+                          >
+                            <Wallet className="w-4 h-4" />
+                          </Button>
+                        </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
                           <DialogTitle>Adjust Balance - {user.full_name || user.email}</DialogTitle>
@@ -1109,6 +1198,7 @@ export default function Admin() {
                         </div>
                       </DialogContent>
                     </Dialog>
+                    </div>
                   </div>
                 </div>
               </div>
