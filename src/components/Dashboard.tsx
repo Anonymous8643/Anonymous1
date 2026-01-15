@@ -13,6 +13,7 @@ import { ActiveInvestments } from "./ActiveInvestments";
 import { CommunityLink } from "./CommunityLink";
 import { PersonalManagerCard } from "./PersonalManagerCard";
 import { PaymentProofs } from "./PaymentProofs";
+import { UserMessagesDialog } from "./UserMessagesDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useWallet } from "@/hooks/useWallet";
@@ -186,6 +187,8 @@ export const Dashboard = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {/* User Messages */}
+              <UserMessagesDialog />
               {/* Streak Badge */}
               <Link to="/rewards">
                 <motion.div
