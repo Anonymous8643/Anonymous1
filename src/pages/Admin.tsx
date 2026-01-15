@@ -820,8 +820,108 @@ export default function Admin() {
           </motion.div>
         )}
 
+        {/* Admin Tabs with Dropdown */}
         <Tabs defaultValue="analytics" className="w-full">
-          <TabsList className="grid w-full grid-cols-13 text-xs">
+          <div className="sticky top-16 z-30 bg-background/95 backdrop-blur-sm py-3 border-b border-border -mx-4 px-4 mb-4">
+            <Select 
+              defaultValue="analytics" 
+              onValueChange={(value) => {
+                // Click the hidden tab trigger
+                const trigger = document.querySelector(`[data-radix-collection-item][value="${value}"]`) as HTMLElement;
+                if (trigger) trigger.click();
+              }}
+            >
+              <SelectTrigger className="w-full bg-card border-2 border-primary/20 shadow-lg">
+                <div className="flex items-center gap-2">
+                  <PieChart className="w-4 h-4 text-primary" />
+                  <SelectValue placeholder="Select Section" />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="bg-card border shadow-xl z-50">
+                <SelectItem value="analytics">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4" />
+                    Analytics & Charts
+                  </div>
+                </SelectItem>
+                <SelectItem value="deposits">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4" />
+                    Deposits ({pendingDeposits.length} pending)
+                  </div>
+                </SelectItem>
+                <SelectItem value="withdrawals">
+                  <div className="flex items-center gap-2">
+                    <TrendingDown className="w-4 h-4" />
+                    Withdrawals ({pendingWithdrawals.length} pending)
+                  </div>
+                </SelectItem>
+                <SelectItem value="users">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Users ({users?.length || 0})
+                  </div>
+                </SelectItem>
+                <SelectItem value="products">
+                  <div className="flex items-center gap-2">
+                    <Package className="w-4 h-4" />
+                    Products
+                  </div>
+                </SelectItem>
+                <SelectItem value="managers">
+                  <div className="flex items-center gap-2">
+                    <UserCog className="w-4 h-4" />
+                    Personal Managers
+                  </div>
+                </SelectItem>
+                <SelectItem value="proofs">
+                  <div className="flex items-center gap-2">
+                    <Camera className="w-4 h-4" />
+                    Payment Proofs
+                  </div>
+                </SelectItem>
+                <SelectItem value="messages">
+                  <div className="flex items-center gap-2">
+                    <Bell className="w-4 h-4" />
+                    Emergency Alerts
+                  </div>
+                </SelectItem>
+                <SelectItem value="news">
+                  <div className="flex items-center gap-2">
+                    <Newspaper className="w-4 h-4" />
+                    Market News
+                  </div>
+                </SelectItem>
+                <SelectItem value="notices">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4" />
+                    Notices
+                  </div>
+                </SelectItem>
+                <SelectItem value="numbers">
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4" />
+                    Payment Numbers
+                  </div>
+                </SelectItem>
+                <SelectItem value="security">
+                  <div className="flex items-center gap-2">
+                    <AlertOctagon className="w-4 h-4" />
+                    Security
+                  </div>
+                </SelectItem>
+                <SelectItem value="settings">
+                  <div className="flex items-center gap-2">
+                    <Settings className="w-4 h-4" />
+                    Settings
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Hidden TabsList for state management */}
+          <TabsList className="hidden">
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="deposits">Deposits</TabsTrigger>
             <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
