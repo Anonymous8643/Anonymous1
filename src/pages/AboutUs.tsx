@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ChevronRight, Shield, Brain, TrendingUp, Users, Award, Building2, CheckCircle } from "lucide-react";
+import { ChevronRight, Shield, Brain, TrendingUp, Users, Award, Building2, CheckCircle, MapPin, Phone, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 import { BottomNav } from "@/components/ui/BottomNav";
 import logo from "@/assets/logo.png";
@@ -198,11 +198,55 @@ export default function AboutUs() {
           </p>
         </motion.div>
 
-        {/* Trust Badges */}
+        {/* Office Location */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
+          className="glass-card p-6"
+        >
+          <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-primary" />
+            Our Office
+          </h3>
+          
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <MapPin className="w-5 h-5 text-muted-foreground mt-0.5" />
+              <div>
+                <p className="font-medium">InvesterMate Headquarters</p>
+                <p className="text-sm text-muted-foreground">
+                  Kenyatta Avenue, View Park Towers<br />
+                  14th Floor, Suite 1408<br />
+                  P.O. Box 45678-00100<br />
+                  Nairobi, Kenya
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <Phone className="w-5 h-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">Customer Support</p>
+                <p className="font-medium">+254 700 123 456</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <Mail className="w-5 h-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">Email</p>
+                <p className="font-medium">support@investermate.co.ke</p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Trust Badges */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
           className="flex justify-center gap-4 flex-wrap"
         >
           <div className="trust-badge">🔒 Bank-Level Security</div>

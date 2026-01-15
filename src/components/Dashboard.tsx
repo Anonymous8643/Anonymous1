@@ -42,7 +42,7 @@ export const Dashboard = () => {
   const { mutate: claimStreakReward } = useClaimStreakReward();
   const { toast } = useToast();
 
-  // Update streak and process pending referral on dashboard load
+  // Update streak, process pending referral, and welcome bonus on dashboard load
   useEffect(() => {
     if (user && streak !== undefined) {
       updateStreak(undefined, {
@@ -70,8 +70,29 @@ export const Dashboard = () => {
           })
           .catch(() => localStorage.removeItem("pendingReferralCode"));
       }
+
+      // Process welcome bonus for new users
+      const newUserWelcomeBonus = localStorage.getItem("newUserWelcomeBonus");
+      if (newUserWelcomeBonus === "true" && wallet) {
+        // Give KES 50 welcome bonus
+        api.wallet.update({ balance: Number(wallet.balance) + 50 })
+          .then(() => {
+            localStorage.removeItem("newUserWelcomeBonus");
+            api.transactions.create({
+              type: "bonus",
+              amount: 50,
+              description: "Welcome bonus for first-time registration",
+              status: "completed",
+            });
+            toast({
+              title: "🎁 Welcome Bonus!",
+              description: "You received KES 50 as a welcome gift! Start investing today!",
+            });
+          })
+          .catch(() => localStorage.removeItem("newUserWelcomeBonus"));
+      }
     }
-  }, [user?.id]);
+  }, [user?.id, wallet?.id]);
 
   const currentHour = new Date().getHours();
   const greeting =

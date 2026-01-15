@@ -28,35 +28,40 @@ export const LiveActivityFeed = () => {
   const [displayedItems, setDisplayedItems] = useState<any[]>([]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Auto-rotate through investments continuously every 2 minutes
+  // Auto-rotate through investments continuously every 8 seconds for smooth rolling
   useEffect(() => {
     if (!investments || investments.length === 0) return;
 
-    // Initialize with first 5 items
+    // Initialize with first 5 items with unique names
     const initialItems = investments.slice(0, Math.min(5, investments.length)).map((inv, i) => ({
       ...inv,
-      displayKey: `${i}-${Date.now()}`
+      displayKey: `${i}-${Date.now()}`,
+      displayName: getRandomName(i)
     }));
     setDisplayedItems(initialItems);
 
-    // Start auto-rotation every 2 minutes (120000ms)
+    // Start auto-rotation every 8 seconds for smooth effect
     intervalRef.current = setInterval(() => {
       setCurrentIndex((prev) => {
         const nextIndex = (prev + 1) % investments.length;
         
-        // Update displayed items with a smooth sliding window effect
+        // Update displayed items with a smooth sliding window effect - names roll with investments
         setDisplayedItems(() => {
           const newItems = [];
           for (let i = 0; i < Math.min(5, investments.length); i++) {
             const idx = (nextIndex + i) % investments.length;
-            newItems.push({ ...investments[idx], displayKey: `${idx}-${Date.now()}` });
+            newItems.push({ 
+              ...investments[idx], 
+              displayKey: `${idx}-${Date.now()}-${nextIndex}`,
+              displayName: getRandomName((nextIndex + i) % RANDOM_NAMES.length)
+            });
           }
           return newItems;
         });
         
         return nextIndex;
       });
-    }, 120000); // 2 minutes
+    }, 8000); // 8 seconds for smooth transitions
 
     return () => {
       if (intervalRef.current) {
@@ -98,7 +103,7 @@ export const LiveActivityFeed = () => {
                   <User className="w-4 h-4 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">{getRandomName((currentIndex + index) % RANDOM_NAMES.length)}</p>
+                  <p className="text-sm font-medium">{investment.displayName || getRandomName(index)}</p>
                   <p className="text-xs text-muted-foreground">
                     Invested in {investment.products?.name || "Product"}
                   </p>

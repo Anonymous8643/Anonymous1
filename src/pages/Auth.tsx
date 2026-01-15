@@ -99,12 +99,15 @@ export default function Auth() {
             toast({ variant: "destructive", title: "Signup failed", description: error.message });
           }
         } else {
-          toast({ title: "Account created!", description: "Welcome to InvesterMate!" });
+          toast({ title: "Account created!", description: "Welcome to InvesterMate! You received KES 50 as a welcome bonus!" });
           
           // Store referral code for processing after first login
           if (referralCode) {
             localStorage.setItem("pendingReferralCode", referralCode);
           }
+          
+          // Mark this as a new user for welcome bonus
+          localStorage.setItem("newUserWelcomeBonus", "true");
           
           navigate("/");
         }

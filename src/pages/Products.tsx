@@ -41,13 +41,18 @@ export default function Products() {
     return roiB - roiA;
   });
 
-  // Get image for product - use gold image for gold-related products
+  // Get image for product - use product's stored image_url consistently
   const getProductImage = (product: any) => {
+    // Use the product's image_url if available, otherwise use gold image as fallback
+    if (product.image_url) {
+      return product.image_url;
+    }
+    // Fallback for products without images
     const name = product.name?.toLowerCase() || "";
     if (name.includes("gold") || name.includes("premium") || name.includes("elite")) {
       return goldProductImage;
     }
-    return product.image_url;
+    return goldProductImage; // Default fallback
   };
 
   return (

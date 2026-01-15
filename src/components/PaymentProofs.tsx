@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { usePaymentScreenshots } from "@/hooks/usePaymentScreenshots";
@@ -9,6 +9,16 @@ export const PaymentProofs = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
+  // Auto-slide every 4 seconds
+  useEffect(() => {
+    if (!screenshots || screenshots.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev === screenshots.length - 1 ? 0 : prev + 1));
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [screenshots]);
   if (isLoading) {
     return <Skeleton className="h-48 w-full rounded-xl" />;
   }

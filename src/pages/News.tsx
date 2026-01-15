@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Newspaper, TrendingUp, Clock, ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -14,6 +14,7 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
+  type CarouselApi,
 } from "@/components/ui/carousel";
 
 // Static articles about InvesterMate
@@ -55,8 +56,20 @@ const companyArticles = [
 export default function News() {
   const { data: marketNews, isLoading } = useMarketNews();
   const [selectedArticle, setSelectedArticle] = useState<typeof companyArticles[0] | null>(null);
+  const [carouselApi, setCarouselApi] = useState<CarouselApi>();
 
   const activeNews = marketNews?.filter(n => n.is_active) || [];
+
+  // Auto-slide news carousel every 5 seconds
+  useEffect(() => {
+    if (!carouselApi || activeNews.length <= 1) return;
+
+    const interval = setInterval(() => {
+      carouselApi.scrollNext();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [carouselApi, activeNews.length]);
 
   return (
     <div className="min-h-screen pb-24">
@@ -85,7 +98,7 @@ export default function News() {
               <h2 className="font-semibold">Market Updates</h2>
             </div>
             
-            <Carousel className="w-full">
+            <Carousel className="w-full" setApi={setCarouselApi} opts={{ loop: true }}>
               <CarouselContent>
                 {activeNews.map((news) => (
                   <CarouselItem key={news.id}>
