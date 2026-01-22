@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, UserStreak, UserLevel, Achievement, UserAchievement, WeeklyChallenge, UserChallenge, SpinHistory } from "@/lib/api";
+import { api, UserStreak, UserLevel, Achievement, UserAchievement, WeeklyChallenge, UserChallenge, SpinHistory, ClaimedStreakReward } from "@/lib/api";
 import { useAuth } from "./useAuth";
 
-export type { UserStreak, UserLevel, Achievement, UserAchievement, WeeklyChallenge, UserChallenge, SpinHistory };
+export type { UserStreak, UserLevel, Achievement, UserAchievement, WeeklyChallenge, UserChallenge, SpinHistory, ClaimedStreakReward };
 
 // Level configuration
 export const LEVEL_CONFIG = [
@@ -99,19 +99,35 @@ export const useUpdateStreak = () => {
   });
 };
 
-// Claim streak reward - adds to wallet
+// Get all claimed streak rewards (to track which rewards have been permanently claimed)
+export const useClaimedStreakRewards = () => {
+  const { user, session } = useAuth();
+
+  return useQuery({
+    queryKey: ["claimed-streak-rewards", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { claimedRewards } = await api.gamification.getClaimedStreakRewards();
+      return claimedRewards;
+    },
+    enabled: !!user && !!session?.access_token,
+  });
+};
+
+// Claim streak reward - adds to wallet (only if not already claimed)
 export const useClaimStreakReward = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
   return useMutation({
     mutationFn: async ({ streakDay, rewardAmount }: { streakDay: number; rewardAmount: number }) => {
-      const { reward } = await api.gamification.claimStreakReward(streakDay, rewardAmount);
-      return reward;
+      const result = await api.gamification.claimStreakReward(streakDay, rewardAmount);
+      return { ...result, alreadyClaimed: result.alreadyClaimed || false };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["wallet", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["user-streak", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["claimed-streak-rewards", user?.id] });
     },
   });
 };

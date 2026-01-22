@@ -1021,17 +1021,24 @@ async function handleGamification(
       if (error) return jsonError(error.message, 400);
       return jsonSuccess({ challenges: data });
     }
+    case "getClaimedStreakRewards": {
+      // Get all streak rewards ever claimed by the user
+      const { data, error } = await adminClient
+        .from("streak_rewards")
+        .select("streak_day, reward_amount, claimed_at")
+        .eq("user_id", userId);
+      if (error) return jsonError(error.message, 400);
+      return jsonSuccess({ claimedRewards: data || [] });
+    }
     case "claimStreakReward": {
       const { streakDay, rewardAmount } = body as { streakDay: number; rewardAmount: number };
       
-      // Check if reward already claimed for this streak day
-      const today = new Date().toISOString().split("T")[0];
+      // Check if reward was EVER claimed for this streak day (permanent - no daily reset)
       const { data: existingReward } = await adminClient
         .from("streak_rewards")
         .select("id")
         .eq("user_id", userId)
         .eq("streak_day", streakDay)
-        .gte("claimed_at", today)
         .maybeSingle();
       
       if (existingReward) {
