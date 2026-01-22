@@ -216,7 +216,58 @@ export default function Admin() {
   }
 
   if (!isAdmin) {
-    return <Navigate to="/" replace />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-md w-full"
+        >
+          <div className="glass-card p-8 text-center space-y-6">
+            {/* Warning Icon */}
+            <div className="mx-auto w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center">
+              <Shield className="w-10 h-10 text-destructive" />
+            </div>
+            
+            {/* Warning Message */}
+            <div className="space-y-2">
+              <h1 className="text-2xl font-display font-bold text-destructive">
+                Access Denied
+              </h1>
+              <p className="text-muted-foreground">
+                You are not authorized to access the admin dashboard.
+              </p>
+            </div>
+
+            {/* Details */}
+            <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-4 text-left space-y-2">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-destructive mt-0.5 shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium text-destructive">Admin Role Required</p>
+                  <p className="text-muted-foreground mt-1">
+                    Your account has not been assigned admin privileges. If you believe this is an error, please contact the platform administrator.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Button */}
+            <Link to="/">
+              <Button className="w-full" size="lg">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Return to Dashboard
+              </Button>
+            </Link>
+
+            {/* Support Note */}
+            <p className="text-xs text-muted-foreground">
+              Need admin access? Contact your personal manager or support team.
+            </p>
+          </div>
+        </motion.div>
+      </div>
+    );
   }
 
   const pendingDeposits = deposits?.filter((d) => d.status === "pending") || [];
