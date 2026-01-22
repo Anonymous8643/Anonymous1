@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   User, Bell, Wallet, CreditCard, Moon, Sun, 
-  ChevronRight, Shield, LogOut, Phone, Mail, Edit2, Save, Loader2, Eye, EyeOff, Lock 
+  ChevronRight, Shield, LogOut, Phone, Mail, Edit2, Save, Loader2, Eye, EyeOff, Lock, MessageSquare, AlertTriangle, Info, CheckCircle 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,9 @@ import logo from "@/assets/logo.png";
 import { Link } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
+import { useUserMessages, useMarkMessageRead } from "@/hooks/useAdminMessages";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function Settings() {
   const { user, signOut } = useAuth();
@@ -36,7 +39,34 @@ export default function Settings() {
   const [notifications, setNotifications] = useState(true);
   const [hideBalance, setHideBalance] = useState(false);
   
+  // User messages
+  const { data: messages } = useUserMessages();
+  const markAsRead = useMarkMessageRead();
+  const unreadCount = messages?.filter(m => !m.is_read).length || 0;
+  
   const darkMode = theme === "dark";
+
+  const getMessageIcon = (type: string) => {
+    switch (type) {
+      case "warning":
+        return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+      case "success":
+        return <CheckCircle className="w-4 h-4 text-profit" />;
+      default:
+        return <Info className="w-4 h-4 text-trust" />;
+    }
+  };
+
+  const getMessageBadgeVariant = (type: string) => {
+    switch (type) {
+      case "warning":
+        return "outline" as const;
+      case "success":
+        return "secondary" as const;
+      default:
+        return "default" as const;
+    }
+  };
 
   // Sync hideBalance state with profile
   useEffect(() => {
@@ -183,6 +213,74 @@ export default function Settings() {
                 <Mail className="w-5 h-5 text-muted-foreground" />
                 <span className="flex-1">{user?.email}</span>
               </div>
+            </div>
+          )}
+        </motion.div>
+
+        {/* Notifications Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="glass-card p-6"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-primary" />
+              Messages
+            </h3>
+            {unreadCount > 0 && (
+              <Badge variant="destructive" className="text-xs">
+                {unreadCount} new
+              </Badge>
+            )}
+          </div>
+
+          {messages && messages.length > 0 ? (
+            <ScrollArea className="max-h-64">
+              <div className="space-y-3">
+                {messages.map((message) => (
+                  <motion.div
+                    key={message.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className={`p-3 rounded-lg border transition-all ${
+                      message.is_read 
+                        ? "bg-muted/20 border-border" 
+                        : "bg-primary/5 border-primary/20"
+                    }`}
+                    onClick={() => {
+                      if (!message.is_read) {
+                        markAsRead.mutate(message.id);
+                      }
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5">{getMessageIcon(message.type)}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-sm truncate">{message.title}</span>
+                          <Badge variant={getMessageBadgeVariant(message.type)} className="text-xs capitalize">
+                            {message.type}
+                          </Badge>
+                          {!message.is_read && (
+                            <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{message.message}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </ScrollArea>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Bell className="w-10 h-10 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">No messages yet</p>
             </div>
           )}
         </motion.div>
