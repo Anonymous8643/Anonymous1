@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2, Phone } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2, Phone, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -243,8 +243,31 @@ export default function Auth() {
                       </button>
                     </div>
                     {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+                    
+                    {/* Password strength note - only show on signup */}
+                    {mode === "signup" && (
+                      <div className="flex items-start gap-2 p-2 rounded-lg bg-primary/5 border border-primary/10">
+                        <ShieldCheck className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                        <p className="text-xs text-muted-foreground">
+                          Use a <span className="font-medium text-foreground">strong, memorable password</span> with at least 6 characters. Mix letters, numbers, and symbols for better security.
+                        </p>
+                      </div>
+                    )}
                   </div>
 
+                {/* Terms & Privacy Policy - only show on signup */}
+                {mode === "signup" && (
+                  <p className="text-xs text-center text-muted-foreground">
+                    By signing up, you agree to our{" "}
+                    <Link to="/terms" className="text-primary hover:underline font-medium">
+                      Terms & Conditions
+                    </Link>{" "}
+                    and{" "}
+                    <Link to="/privacy" className="text-primary hover:underline font-medium">
+                      Privacy Policy
+                    </Link>
+                  </p>
+                )}
 
                 <Button type="submit" className="w-full gap-2" disabled={isLoading}>
                   {isLoading ? (
