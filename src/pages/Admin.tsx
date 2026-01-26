@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   Users, Wallet, Phone, CheckCircle, XCircle, 
@@ -10,6 +10,8 @@ import {
   Package, UserCog, Camera, Settings, PieChart
 } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -207,7 +209,37 @@ export default function Admin() {
   // User pagination
   const USERS_PER_PAGE = 20;
 
-  if (checkingAdmin) {
+  const { user, loading: authLoading } = useAuth();
+
+  // Log unauthorized admin access attempt
+  useEffect(() => {
+    if (!isAdmin && !checkingAdmin && !authLoading && user) {
+      const logUnauthorizedAccess = async () => {
+        try {
+          await supabase.from('suspicious_activities').insert({
+            user_id: user.id,
+            action: 'unauthorized_admin_access',
+            severity: 'medium',
+            details: {
+              attempted_route: '/admin',
+              timestamp: new Date().toISOString(),
+            },
+            ip_address: null,
+            user_agent: navigator.userAgent,
+            browser: navigator.userAgent.includes('Chrome') ? 'Chrome' : 
+                     navigator.userAgent.includes('Firefox') ? 'Firefox' : 
+                     navigator.userAgent.includes('Safari') ? 'Safari' : 'Other',
+            device: /Mobile|Android|iPhone/.test(navigator.userAgent) ? 'Mobile' : 'Desktop',
+          });
+        } catch (error) {
+          console.error('Failed to log unauthorized access:', error);
+        }
+      };
+      logUnauthorizedAccess();
+    }
+  }, [isAdmin, checkingAdmin, authLoading, user]);
+
+  if (checkingAdmin || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
