@@ -29,6 +29,7 @@ export const LiveActivityFeed = () => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Auto-rotate through investments continuously every 8 seconds for smooth rolling
+  // Starts after 2 minutes delay
   useEffect(() => {
     if (!investments || investments.length === 0) return;
 
@@ -40,30 +41,34 @@ export const LiveActivityFeed = () => {
     }));
     setDisplayedItems(initialItems);
 
-    // Start auto-rotation every 8 seconds for smooth effect
-    intervalRef.current = setInterval(() => {
-      setCurrentIndex((prev) => {
-        const nextIndex = (prev + 1) % investments.length;
-        
-        // Update displayed items with a smooth sliding window effect - names roll with investments
-        setDisplayedItems(() => {
-          const newItems = [];
-          for (let i = 0; i < Math.min(5, investments.length); i++) {
-            const idx = (nextIndex + i) % investments.length;
-            newItems.push({ 
-              ...investments[idx], 
-              displayKey: `${idx}-${Date.now()}-${nextIndex}`,
-              displayName: getRandomName((nextIndex + i) % RANDOM_NAMES.length)
-            });
-          }
-          return newItems;
+    // Delay start of auto-rotation by 2 minutes (120000ms)
+    const startDelay = setTimeout(() => {
+      // Start auto-rotation every 8 seconds for smooth effect
+      intervalRef.current = setInterval(() => {
+        setCurrentIndex((prev) => {
+          const nextIndex = (prev + 1) % investments.length;
+          
+          // Update displayed items with a smooth sliding window effect - names roll with investments
+          setDisplayedItems(() => {
+            const newItems = [];
+            for (let i = 0; i < Math.min(5, investments.length); i++) {
+              const idx = (nextIndex + i) % investments.length;
+              newItems.push({ 
+                ...investments[idx], 
+                displayKey: `${idx}-${Date.now()}-${nextIndex}`,
+                displayName: getRandomName((nextIndex + i) % RANDOM_NAMES.length)
+              });
+            }
+            return newItems;
+          });
+          
+          return nextIndex;
         });
-        
-        return nextIndex;
-      });
-    }, 8000); // 8 seconds for smooth transitions
+      }, 8000); // 8 seconds for smooth transitions
+    }, 120000); // 2 minutes delay before starting rotation
 
     return () => {
+      clearTimeout(startDelay);
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
